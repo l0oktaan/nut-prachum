@@ -219,9 +219,10 @@ function RoomForm({ draft, onDismiss }: { draft: RoomDraft | null; onDismiss: ()
           value={timeMode}
           onChange={setTimeMode}
           options={[
-            { value: "day", label: <><Sun className="size-4" /> ทั้งวัน</> },
-            { value: "period", label: <><Coffee className="size-4" /> เช้า/บ่าย/เย็น</> },
-            { value: "hour", label: <><Clock3 className="size-4" /> รายชั่วโมง</> },
+            // Icons only from sm up: three labels plus icons don't fit a 390px phone.
+            { value: "day", label: <><Sun className="hidden size-4 sm:block" /> ทั้งวัน</> },
+            { value: "period", label: <><Coffee className="hidden size-4 sm:block" /> เช้า/บ่าย/เย็น</> },
+            { value: "hour", label: <><Clock3 className="hidden size-4 sm:block" /> รายชั่วโมง</> },
           ]}
         />
         {timeMode === "hour" && (
@@ -312,7 +313,8 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <fieldset className="flex flex-col gap-4">
+    // Fieldsets default to min-width: min-content, which would push wide rows past a phone screen.
+    <fieldset className="flex min-w-0 flex-col gap-4">
       <legend className="mb-4 flex items-center gap-3 text-lg font-bold text-fg">
         <span className={cx("icon-bubble", tone)}>{icon}</span>
         {title}

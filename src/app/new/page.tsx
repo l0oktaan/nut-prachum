@@ -27,7 +27,7 @@ export default function NewRoomPage() {
         subtitle="ตั้งหัวข้อ แตะเลือกวันบนปฏิทิน ใส่รายชื่อสมาชิก แล้วรับลิงก์ไปส่งในกลุ่มได้เลย"
       />
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div id="create" className="scroll-mt-24">
           <CreateRoomForm />
         </div>

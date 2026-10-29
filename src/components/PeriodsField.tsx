@@ -1,10 +1,14 @@
 "use client";
 
-import { Plus, RotateCcw, X } from "lucide-react";
+import { useState } from "react";
+import { Check, Clock, Plus, RotateCcw, X } from "lucide-react";
+import { TimeWheel } from "./TimeWheel";
+import { cx } from "./ui";
 import { DEFAULT_PERIODS, fmtMin, MAX_PERIODS, type Period } from "@/lib/slots";
 
-// 15-minute steps, 05:00–24:00.
-const TIMES = Array.from({ length: 77 }, (_, i) => 300 + i * 15);
+// Times run 05:00–24:00 in 15-minute steps.
+const FIRST = 300;
+const LAST = 1440;
 
 /** Overlapping or inverted periods, as a message for the form; null when fine. */
 export function periodsProblem(periods: Period[]): string | null {
@@ -20,12 +24,15 @@ export const isDefaultPeriods = (periods: Period[]) => JSON.stringify(periods) =
 /** Editor for the room's own periods: name and start/end of each, e.g. เช้า 08:30–12:00. */
 export function PeriodsField({ value, onChange }: { value: Period[]; onChange: (next: Period[]) => void }) {
   const problem = periodsProblem(value);
+  // Which row's time wheels are open (one at a time).
+  const [editing, setEditing] = useState<number | null>(null);
   const update = (i: number, patch: Partial<Period>) => onChange(value.map((p, j) => (j === i ? { ...p, ...patch } : p)));
 
   const add = () => {
     const last = value.reduce((m, p) => Math.max(m, p.end), 0);
     const start = Math.min(last + 60, 1380);
-    onChange([...value, { label: `ช่วงที่ ${value.length + 1}`, start, end: Math.min(start + 120, 1440) }]);
+    onChange([...value, { label: `ช่วงที่ ${value.length + 1}`, start, end: Math.min(start + 120, LAST) }]);
+    setEditing(value.length);
   };
 
   return (
@@ -52,43 +59,45 @@ export function PeriodsField({ value, onChange }: { value: Period[]; onChange: (
               aria-label={`ชื่อช่วงที่ ${i + 1}`}
               onChange={(e) => update(i, { label: e.target.value })}
             />
-            <div className="flex items-center gap-1.5">
-              <select
-                className="input w-auto px-3 py-1.5 text-sm tabular-nums"
-                value={p.start}
-                aria-label={`เวลาเริ่มช่วงที่ ${i + 1}`}
-                onChange={(e) => update(i, { start: Number(e.target.value) })}
-              >
-                {TIMES.slice(0, -1).map((m) => (
-                  <option key={m} value={m}>
-                    {fmtMin(m)}
-                  </option>
-                ))}
-              </select>
-              <span className="text-stone-400">–</span>
-              <select
-                className="input w-auto px-3 py-1.5 text-sm tabular-nums"
-                value={p.end}
-                aria-label={`เวลาสิ้นสุดช่วงที่ ${i + 1}`}
-                onChange={(e) => update(i, { end: Number(e.target.value) })}
-              >
-                {TIMES.slice(1).map((m) => (
-                  <option key={m} value={m}>
-                    {fmtMin(m)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <button
+              type="button"
+              aria-expanded={editing === i}
+              aria-label={`เวลาช่วงที่ ${i + 1}: ${fmtMin(p.start)} ถึง ${fmtMin(p.end)} — แตะเพื่อเปลี่ยน`}
+              onClick={() => setEditing(editing === i ? null : i)}
+              className={cx(
+                "flex items-center gap-2 rounded-2xl border px-3 py-1.5 text-sm font-semibold tabular-nums transition",
+                editing === i ? "border-fg/20 bg-surface ring-4 ring-neon/50" : "border-transparent bg-canvas hover:bg-stone-200/60",
+              )}
+            >
+              <Clock className="size-4 text-stone-400" />
+              {fmtMin(p.start)} <span className="font-normal text-stone-400">–</span> {fmtMin(p.end)}
+            </button>
             <button
               type="button"
               className="btn btn-ghost btn-sm ml-auto px-2"
               disabled={value.length <= 1}
-              onClick={() => onChange(value.filter((_, j) => j !== i))}
+              onClick={() => {
+                onChange(value.filter((_, j) => j !== i));
+                setEditing(null);
+              }}
               aria-label={`ลบช่วง ${p.label}`}
               title="ลบช่วงนี้"
             >
               <X className="size-4" />
             </button>
+            {editing === i && (
+              <div className="animate-fade-up flex w-full flex-col items-center gap-3 rounded-2xl bg-canvas p-3">
+                {/* Side by side where they fit; stacked on narrow phones. */}
+                <div className="flex flex-wrap items-end justify-center gap-x-3 gap-y-3">
+                  <TimeWheel label="เริ่ม" value={p.start} min={FIRST} max={LAST - 15} onChange={(start) => update(i, { start })} />
+                  <span className="hidden pb-[5.5rem] text-xl text-stone-400 sm:block">–</span>
+                  <TimeWheel label="สิ้นสุด" value={p.end} min={FIRST + 15} max={LAST} onChange={(end) => update(i, { end })} />
+                </div>
+                <button type="button" className="btn btn-primary btn-sm w-full sm:w-auto sm:px-8" onClick={() => setEditing(null)}>
+                  <Check className="size-3.5" /> เสร็จ
+                </button>
+              </div>
+            )}
           </li>
         ))}
       </ul>
