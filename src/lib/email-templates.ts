@@ -26,7 +26,7 @@ const esc = (s: string) =>
 function button(href: string, label: string) {
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
 <td class="btn" bgcolor="${C.ink}" style="border-radius:999px;background:${C.ink}">
-<a href="${esc(href)}" style="display:inline-block;padding:14px 28px;font:bold 16px/1 ${FONT};color:#ffffff;text-decoration:none;border-radius:999px">${label}</a>
+<a href="${esc(href)}" style="display:inline-block;padding:14px 28px;font:bold 18px/1 ${FONT};color:#ffffff;text-decoration:none;border-radius:999px">${label}</a>
 </td></tr></table>`;
 }
 
@@ -53,7 +53,7 @@ function layout({ title, preheader, origin, body, extra }: { title: string; preh
   }
   @media (max-width: 600px) {
     .pad { padding: 24px 20px !important; }
-    .h1 { font-size: 22px !important; }
+    .h1 { font-size: 26px !important; }
   }
 </style>
 </head>
@@ -67,8 +67,8 @@ function layout({ title, preheader, origin, body, extra }: { title: string; preh
   <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
     <td style="vertical-align:middle"><img src="${origin}/email/logo.png" width="40" height="40" alt="" style="display:block;border:0"></td>
     <td style="vertical-align:middle;padding-left:10px;font-family:${FONT}">
-      <div class="fg" style="font-size:16px;font-weight:bold;color:${C.ink};line-height:1.2">Set up a meeting</div>
-      <div class="muted" style="font-size:12px;color:${C.muted};line-height:1.3">นัดประชุม</div>
+      <div class="fg" style="font-size:18px;font-weight:bold;color:${C.ink};line-height:1.2">Set up a meeting</div>
+      <div class="muted" style="font-size:14px;color:${C.muted};line-height:1.3">นัดประชุม</div>
     </td>
   </tr></table>
 </td></tr>
@@ -79,7 +79,7 @@ ${body}
 
 ${extra ?? ""}
 
-<tr><td class="muted" align="center" style="padding:24px 16px 0;font:12px/1.7 ${FONT};color:${C.muted}">
+<tr><td class="muted" align="center" style="padding:24px 16px 0;font:14px/1.7 ${FONT};color:${C.muted}">
   อีเมลนี้ส่งอัตโนมัติจาก <a href="${origin}" style="color:${C.muted};text-decoration:underline">นัดประชุม · setmeet.tontaan.tech</a> กรุณาอย่าตอบกลับ<br>
   ระบบไม่ได้เก็บอีเมลของคุณ · รหัสอ้างอิง {{ref}}
 </td></tr>
@@ -111,28 +111,28 @@ export function adminLinkEmail(m: AdminLinkEmail) {
   ];
 
   const body = `
-<span style="display:inline-block;background:${C.neon};color:${C.ink};font-size:12px;font-weight:bold;padding:5px 12px;border-radius:999px">ลิงก์ผู้ดูแล</span>
-<h1 class="fg h1" style="margin:14px 0 6px;font-size:26px;line-height:1.3;color:${C.ink}">${esc(m.title)}</h1>
-${when ? `<p class="muted" style="margin:0 0 18px;font-size:14px;color:${C.muted}">🗓️ ${esc(when)}</p>` : ""}
-<p class="fg" style="margin:0 0 22px;font-size:15px;line-height:1.7;color:${C.ink}">
+<span style="display:inline-block;background:${C.neon};color:${C.ink};font-size:14px;font-weight:bold;padding:5px 12px;border-radius:999px">ลิงก์ผู้ดูแล</span>
+<h1 class="fg h1" style="margin:14px 0 6px;font-size:30px;line-height:1.3;color:${C.ink}">${esc(m.title)}</h1>
+${when ? `<p class="muted" style="margin:0 0 18px;font-size:16px;color:${C.muted}">🗓️ ${esc(when)}</p>` : ""}
+<p class="fg" style="margin:0 0 22px;font-size:17px;line-height:1.7;color:${C.ink}">
   ห้องนัดประชุมของคุณพร้อมแล้ว ใช้ปุ่มด้านล่างกลับมาดูผล ยืนยันวันประชุม และจัดการรายชื่อสมาชิกได้ทุกเมื่อ
 </p>
 ${button(m.adminUrl, "เปิดหน้าผู้ดูแล →")}
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:22px"><tr>
-<td class="soft" bgcolor="${C.soft}" style="background:${C.soft};border-radius:16px;padding:14px 16px;font-size:13px;line-height:1.6">
+<td class="soft" bgcolor="${C.soft}" style="background:${C.soft};border-radius:16px;padding:14px 16px;font-size:15px;line-height:1.6">
   <span class="fg" style="color:${C.ink};font-weight:bold">🔒 เก็บอีเมลนี้เป็นความลับ</span><br>
   <span class="muted" style="color:${C.muted}">ใครมีลิงก์ผู้ดูแลจะแก้ไขห้องได้ — ส่งให้สมาชิกเฉพาะ “ลิงก์สำหรับสมาชิก” ด้านล่าง</span>
 </td></tr></table>
 
-<p class="fg" style="margin:26px 0 8px;font-size:14px;font-weight:bold;color:${C.ink}">ลิงก์สำหรับสมาชิก</p>
+<p class="fg" style="margin:26px 0 8px;font-size:16px;font-weight:bold;color:${C.ink}">ลิงก์สำหรับสมาชิก</p>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-<td class="soft" bgcolor="${C.soft}" style="background:${C.soft};border-left:4px solid ${C.lilac};border-radius:12px;padding:12px 14px;font:14px/1.5 ${MONO};word-break:break-all">
+<td class="soft" bgcolor="${C.soft}" style="background:${C.soft};border-left:4px solid ${C.lilac};border-radius:12px;padding:12px 14px;font:16px/1.5 ${MONO};word-break:break-all">
   <a class="violet" href="${esc(m.memberUrl)}" style="color:${C.violet};text-decoration:none">${esc(m.memberUrl)}</a>
 </td></tr></table>
-<p class="muted" style="margin:8px 0 0;font-size:12px;color:${C.muted}">ส่งลิงก์นี้ในกลุ่มแชต สมาชิกเปิดแล้วเลือกชื่อตัวเองได้ทันที ไม่ต้องสมัครสมาชิก</p>
+<p class="muted" style="margin:8px 0 0;font-size:14px;color:${C.muted}">ส่งลิงก์นี้ในกลุ่มแชต สมาชิกเปิดแล้วเลือกชื่อตัวเองได้ทันที ไม่ต้องสมัครสมาชิก</p>
 
-<p class="muted" style="margin:26px 0 0;font-size:12px;line-height:1.6;color:${C.muted};word-break:break-all">
+<p class="muted" style="margin:26px 0 0;font-size:14px;line-height:1.6;color:${C.muted};word-break:break-all">
   ถ้าปุ่มกดไม่ได้ คัดลอกลิงก์ผู้ดูแลนี้ไปเปิด:<br>
   <a href="${esc(m.adminUrl)}" style="color:${C.muted}">${esc(m.adminUrl)}</a>
 </p>`;
@@ -141,14 +141,14 @@ ${button(m.adminUrl, "เปิดหน้าผู้ดูแล →")}
   const extra = `<tr><td style="padding-top:16px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.ink}" style="background:${C.ink};border-radius:24px">
 <tr><td class="pad" style="padding:24px 28px;font-family:${FONT}">
-  <div style="font-size:11px;letter-spacing:1px;color:#a8a29e;font-weight:bold">ขั้นตอนต่อไป</div>
+  <div style="font-size:12px;letter-spacing:1px;color:#a8a29e;font-weight:bold">ขั้นตอนต่อไป</div>
   ${steps
     .map(
       ([h, d], i) => `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px"><tr>
-    <td style="vertical-align:top;width:40px"><div style="width:30px;height:30px;line-height:30px;border-radius:15px;text-align:center;font-weight:bold;font-size:14px;${i === 0 ? `background:${C.neon};color:${C.ink}` : "background:#2f2f34;color:#ffffff"}">${i + 1}</div></td>
+    <td style="vertical-align:top;width:46px"><div style="width:34px;height:34px;line-height:34px;border-radius:17px;text-align:center;font-weight:bold;font-size:16px;${i === 0 ? `background:${C.neon};color:${C.ink}` : "background:#2f2f34;color:#ffffff"}">${i + 1}</div></td>
     <td style="vertical-align:top">
-      <div style="color:#ffffff;font-size:15px;font-weight:bold;line-height:1.4">${h}</div>
-      <div style="color:#a8a29e;font-size:13px;line-height:1.5">${d}</div>
+      <div style="color:#ffffff;font-size:17px;font-weight:bold;line-height:1.4">${h}</div>
+      <div style="color:#a8a29e;font-size:15px;line-height:1.5">${d}</div>
     </td></tr></table>`,
     )
     .join("")}
