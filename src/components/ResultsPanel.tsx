@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowUp, CalendarCheck, Grid3x3, Lock, Trophy } from "lucide-react";
+import { AlertTriangle, ArrowUp, CalendarCheck, Grid3x3, Lock, MessageSquareText, Star, Trophy } from "lucide-react";
 import { HeatGrid, Legend } from "./SlotGrid";
 import { Avatar, cx } from "./ui";
-import { candidates, rank, score, tally, type CellTally } from "@/lib/results";
+import { candidates, missingOf, rank, score, tally, type CellTally } from "@/lib/results";
 import { addDays, cellKey, dateParts, formatBlock, getDates, parseCellKey, slotLabel } from "@/lib/slots";
 import type { Cell, ParticipantPublic, RoomPublic } from "@/lib/types";
 
@@ -27,7 +27,13 @@ export function ResultsPanel({
 }) {
   const cellTallies = useMemo(() => tally(room, cells), [room, cells]);
   const cands = useMemo(() => candidates(room, cellTallies), [room, cellTallies]);
-  const best = useMemo(() => rank(cands, 5), [cands]);
+  // Key members who answered; those who haven't are missing from every candidate alike.
+  const keyIds = useMemo(
+    () => participants.filter((p) => p.required && p.respondedAt).map((p) => p.id),
+    [participants],
+  );
+  const best = useMemo(() => rank(cands, 5, keyIds), [cands, keyIds]);
+  const notes = participants.filter((p) => p.note);
   const responded = participants.filter((p) => p.respondedAt);
   const finalKey = room.finalDate && room.finalSlot !== null ? cellKey(room.finalDate, room.finalSlot) : null;
   const [selected, setSelected] = useState<string | null>(null);
@@ -101,12 +107,36 @@ export function ResultsPanel({
             picking={picking}
           />
         )}
+
+        {notes.length > 0 && (
+          <section className="card p-5 sm:p-6">
+            <h2 className="card-title">
+              <span className="icon-bubble bg-canvas">
+                <MessageSquareText className="size-4" />
+              </span>
+              หมายเหตุจากสมาชิก ({notes.length})
+            </h2>
+            <ul className="mt-4 flex flex-col gap-2">
+              {notes.map((p) => (
+                <li key={p.id} className="flex items-start gap-3 rounded-2xl bg-canvas px-3 py-2.5">
+                  <Avatar name={p.name} className="size-7 text-xs" />
+                  <div className="min-w-0 text-sm">
+                    <p className="font-semibold">{p.name}</p>
+                    <p className="break-words whitespace-pre-wrap text-stone-600">{p.note}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </div>
 
       <BestTimes
         room={room}
         cands={cands}
         best={best}
+        participants={participants}
+        keyIds={keyIds}
         respondedCount={responded.length}
         activeKey={activeKey}
         onSelect={setSelected}
@@ -121,6 +151,8 @@ function BestTimes({
   room,
   cands,
   best,
+  participants,
+  keyIds,
   respondedCount,
   activeKey,
   onSelect,
@@ -128,10 +160,13 @@ function BestTimes({
   room: RoomPublic;
   cands: Map<string, CellTally>;
   best: CellTally[];
+  participants: ParticipantPublic[];
+  keyIds: string[];
   respondedCount: number;
   activeKey: string | null;
   onSelect: (key: string) => void;
 }) {
+  const nameOf = (id: string) => participants.find((p) => p.id === id)?.name ?? "?";
   // Per start date: the strongest candidate's score and its "available" count, as shares of respondents.
   const days = useMemo(() => {
     const total = Math.max(1, respondedCount);
@@ -246,6 +281,16 @@ function BestTimes({
                 <span className="min-w-0 flex-1 text-sm leading-tight">
                   <span className="block font-semibold">{formatBlock(room, t.date)}</span>
                   <span className="block text-xs text-stone-400">{slotLabel(room, t.slot)}</span>
+                  {keyIds.length > 0 &&
+                    (missingOf(t, keyIds).length ? (
+                      <span className="mt-0.5 block truncate text-xs text-rose-300">
+                        ขาดสมาชิกหลัก: {missingOf(t, keyIds).map(nameOf).join(", ")}
+                      </span>
+                    ) : (
+                      <span className="mt-0.5 flex items-center gap-1 text-xs text-neon">
+                        <Star className="size-3 fill-neon" /> สมาชิกหลักว่างครบ
+                      </span>
+                    ))}
                 </span>
                 <span className="text-right text-xs tabular-nums">
                   <span className="block font-bold text-neon">
@@ -287,6 +332,12 @@ function CellDetail({
   const pending = participants.filter((p) => !p.respondedAt);
   const { date, slot } = parseCellKey(tally.key);
   const multiDay = room.durationDays > 1;
+  const keyMissing = no.filter((p) => p.required);
+  const keyPending = pending.filter((p) => p.required);
+  const keyWarning = [
+    keyMissing.length && `สมาชิกหลักไม่ว่าง: ${keyMissing.map((p) => p.name).join(", ")}`,
+    keyPending.length && `สมาชิกหลักยังไม่ตอบ: ${keyPending.map((p) => p.name).join(", ")}`,
+  ].filter(Boolean) as string[];
 
   return (
     <section className="card animate-fade-up p-5 sm:p-6">
@@ -312,7 +363,8 @@ function CellDetail({
                 type="button"
                 disabled={picking}
                 onClick={() => {
-                  if (confirm("สรุปเป็นวันประชุม และปิดรับคำตอบจากสมาชิก?")) onPickFinal(date, slot, true);
+                  const warn = keyWarning.length ? `⚠️ ${keyWarning.join("\n⚠️ ")}\n\n` : "";
+                  if (confirm(`${warn}สรุปเป็นวันประชุม และปิดรับคำตอบจากสมาชิก?`)) onPickFinal(date, slot, true);
                 }}
                 className="btn btn-primary"
               >
@@ -321,7 +373,11 @@ function CellDetail({
               <button
                 type="button"
                 disabled={picking}
-                onClick={() => onPickFinal(date, slot, false)}
+                onClick={() => {
+                  if (!keyWarning.length || confirm(`⚠️ ${keyWarning.join("\n⚠️ ")}\n\nยืนยันวันนี้หรือไม่?`)) {
+                    onPickFinal(date, slot, false);
+                  }
+                }}
                 className="text-xs font-medium text-stone-500 underline-offset-2 hover:text-ink hover:underline"
               >
                 ยืนยันวันอย่างเดียว (ยังรับคำตอบต่อ)
@@ -329,6 +385,17 @@ function CellDetail({
             </div>
           ))}
       </div>
+
+      {keyWarning.length > 0 && (
+        <div className="mb-4 flex items-start gap-2 rounded-2xl bg-rose-50 px-3 py-2.5 text-xs text-rose-700">
+          <AlertTriangle className="mt-px size-3.5 shrink-0" />
+          <div>
+            {keyWarning.map((w) => (
+              <p key={w}>{w}</p>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <NameGroup title={multiDay ? "สะดวกครบทุกวัน" : "สะดวก"} dot="bg-neon ring-1 ring-black/10" people={yes} />
@@ -353,6 +420,7 @@ function NameGroup({ title, dot, people }: { title: string; dot: string; people:
           <span key={p.id} className="flex items-center gap-1.5 rounded-full bg-canvas py-0.5 pr-3 pl-0.5 text-xs font-medium">
             <Avatar name={p.name} className="size-6 text-[10px]" />
             {p.name}
+            {p.required && <Star className="size-3 fill-neon text-ink" aria-label="สมาชิกหลัก" />}
           </span>
         ))}
       </div>

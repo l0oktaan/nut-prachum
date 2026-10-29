@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { CalendarCheck, ChevronLeft, ChevronRight, Eraser, X } from "lucide-react";
 import { cx } from "./ui";
-import { useClientValue } from "@/lib/client";
+import { useClientValue, useHolidays } from "@/lib/client";
 import { dateParts, formatDateShortYear, formatMonthYear, MAX_DAYS } from "@/lib/slots";
 
 const WEEKDAYS = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
@@ -33,6 +33,7 @@ export function MultiDatePicker({
   initialMonth?: string;
 }) {
   const today = useClientValue(localToday, "");
+  const holidays = useHolidays();
   const [view, setView] = useState<{ y: number; m: number } | null>(null);
   const anchor = initialMonth ?? today;
   const cur = view ?? (anchor ? { y: Number(anchor.slice(0, 4)), m: Number(anchor.slice(5, 7)) - 1 } : null);
@@ -82,8 +83,9 @@ export function MultiDatePicker({
   const weekdaysOfMonth = (w: number) => monthDays.filter((d) => new Date(`${d}T00:00:00Z`).getUTCDay() === w);
   const workdays = monthDays.filter((d) => {
     const w = new Date(`${d}T00:00:00Z`).getUTCDay();
-    return w !== 0 && w !== 6;
+    return w !== 0 && w !== 6 && !holidays[d];
   });
+  const monthHolidays = monthDays.filter((d) => holidays[d]);
 
   const shift = (delta: number) => {
     const t = new Date(Date.UTC(cur.y, cur.m + delta, 1));
@@ -139,6 +141,7 @@ export function MultiDatePicker({
             const on = selected.has(d);
             const past = !selectable(d);
             const weekend = dateParts(d).weekend;
+            const holiday = holidays[d];
             return (
               <button
                 key={d}
@@ -146,25 +149,46 @@ export function MultiDatePicker({
                 onClick={() => toggle(d)}
                 disabled={past}
                 aria-pressed={on}
+                title={holiday}
                 className={cx(
-                  "mx-auto grid aspect-square w-full max-w-12 place-items-center rounded-full text-base font-semibold transition",
+                  "relative mx-auto grid aspect-square w-full max-w-12 place-items-center rounded-full text-base font-semibold transition",
                   on && "animate-pop bg-neon font-bold text-ink shadow-sm",
                   !on && !past && "hover:bg-white hover:shadow-sm",
-                  !on && !past && (weekend ? "text-lilac" : "text-ink"),
+                  !on && !past && (holiday ? "text-rose-500" : weekend ? "text-lilac" : "text-ink"),
                   past && "cursor-not-allowed text-stone-300",
                   d === today && !on && "ring-2 ring-ink ring-inset",
                 )}
               >
                 {Number(d.slice(8))}
+                {holiday && !past && (
+                  <span className="absolute bottom-1 size-1 rounded-full bg-rose-500" aria-label={holiday} />
+                )}
               </button>
             );
           })}
         </div>
+
+        {monthHolidays.length > 0 && (
+          <ul className="mt-3 flex flex-col gap-1 border-t border-black/5 pt-3 text-xs text-stone-500">
+            {monthHolidays.map((d) => (
+              <li key={d} className="flex items-baseline gap-2">
+                <span className="size-1.5 shrink-0 translate-y-[-1px] rounded-full bg-rose-500" />
+                <span className="w-14 shrink-0 font-semibold text-rose-500">{dateParts(d).day} {dateParts(d).month}</span>
+                <span>{holidays[d]}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className="btn btn-secondary btn-sm" onClick={() => toggleGroup(workdays)}>
-          <CalendarCheck className="size-3.5" /> จันทร์–ศุกร์ทั้งเดือน
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm"
+          title="เลือกทุกวันจันทร์–ศุกร์ในเดือนนี้ ยกเว้นวันหยุดนักขัตฤกษ์"
+          onClick={() => toggleGroup(workdays)}
+        >
+          <CalendarCheck className="size-3.5" /> วันทำงานทั้งเดือน
         </button>
         <button
           type="button"

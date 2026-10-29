@@ -13,6 +13,27 @@ export function useClientValue<T extends string | number | boolean | null | unde
   return useSyncExternalStore(noopSubscribe, get, () => server);
 }
 
+/* -------------------------------- holidays -------------------------------- */
+
+const NO_HOLIDAYS: Record<string, string> = {};
+let holidays: Record<string, string> | null = null;
+let holidaysLoad: Promise<void> | null = null;
+const holidayListeners = new Set<() => void>();
+
+function subscribeHolidays(onChange: () => void) {
+  holidayListeners.add(onChange);
+  holidaysLoad ??= fetch("/api/holidays")
+    .then((r) => r.json())
+    .then((d: { holidays?: Record<string, string> }) => void (holidays = d.holidays ?? NO_HOLIDAYS))
+    .catch(() => void (holidays = NO_HOLIDAYS))
+    .finally(() => holidayListeners.forEach((l) => l()));
+  return () => void holidayListeners.delete(onChange);
+}
+
+/** Thai public holidays ("YYYY-MM-DD" → name), fetched once per page; empty until loaded. */
+export const useHolidays = () =>
+  useSyncExternalStore(subscribeHolidays, () => holidays ?? NO_HOLIDAYS, () => NO_HOLIDAYS);
+
 export async function api<T>(url: string, init: RequestInit & { adminKey?: string } = {}): Promise<T> {
   const { adminKey, headers, ...rest } = init;
   const res = await fetch(url, {
@@ -87,6 +108,7 @@ export interface RoomDraft {
   slotMinutes: number;
   durationDays: number;
   allowNewMembers: boolean;
+  /** One name per line, as typed in the form ("*" marks a key member). */
   members: string[];
 }
 

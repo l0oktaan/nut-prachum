@@ -17,11 +17,16 @@ export interface ParticipantPublic {
   id: string;
   name: string;
   invited: boolean;
+  /** A key member: candidates where every responding key member can come rank first. */
+  required: boolean;
   claimed: boolean;
   respondedAt: string | null;
+  /** Note to the organizer — only in admin snapshots. */
+  note?: string;
 }
 
 export interface ParticipantAdmin extends ParticipantPublic {
+  note: string;
   token: string;
   claimedAt: string | null;
   lastSeenAt: string | null;
@@ -53,4 +58,5 @@ export interface Me {
   name: string;
   token: string;
   respondedAt: string | null;
+  note: string;
 }

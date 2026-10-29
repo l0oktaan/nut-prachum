@@ -56,12 +56,20 @@ export function candidates(config: SlotConfig, cellTallies: Map<string, CellTall
 
 export const score = (t: CellTally) => t.yes.length + t.maybe.length * 0.5;
 
-/** Best candidates first: most "available", then most "if needed", then earliest. */
-export function rank(tallies: Map<string, CellTally>, limit = 5): CellTally[] {
+/** Key members (participant ids) who can't make this candidate — neither "available" nor "if needed". */
+export const missingOf = (t: CellTally, required: string[]) =>
+  required.filter((id) => !t.yes.includes(id) && !t.maybe.includes(id));
+
+/**
+ * Best candidates first: fewest missing key members, then most "available", then most "if needed",
+ * then earliest. Pass only key members who have answered — the rest are missing everywhere alike.
+ */
+export function rank(tallies: Map<string, CellTally>, limit = 5, required: string[] = []): CellTally[] {
   return [...tallies.values()]
     .filter((t) => t.yes.length + t.maybe.length > 0)
     .sort(
       (a, b) =>
+        missingOf(a, required).length - missingOf(b, required).length ||
         b.yes.length - a.yes.length ||
         b.maybe.length - a.maybe.length ||
         a.date.localeCompare(b.date) ||

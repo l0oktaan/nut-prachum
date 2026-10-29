@@ -417,7 +417,75 @@ function MyAvailability({ snapshot, me, onSaved }: { snapshot: Snapshot; me: Me;
           <ErrorNote message={error} />
         </div>
       )}
+
+      <NoteField slug={room.slug} me={me} locked={room.isLocked} onSaved={onSaved} />
     </section>
+  );
+}
+
+/** Free-text note to the organizer, saved automatically. Only the organizer (and the author) sees it. */
+function NoteField({
+  slug,
+  me,
+  locked,
+  onSaved,
+}: {
+  slug: string;
+  me: Me;
+  locked: boolean;
+  onSaved: (m: Me) => void;
+}) {
+  const [note, setNote] = useState(me.note);
+  const [state, setState] = useState<SaveState>("idle");
+  const [error, setError] = useState<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const save = async (value: string) => {
+    setState("saving");
+    try {
+      const res = await api<{ me: Me | null }>(`/api/rooms/${slug}/me`, {
+        method: "PATCH",
+        body: JSON.stringify({ note: value }),
+      });
+      setState("saved");
+      setError(null);
+      if (res.me) onSaved(res.me);
+    } catch (e) {
+      setState("error");
+      setError((e as Error).message);
+    }
+  };
+
+  const onChange = (value: string) => {
+    setNote(value);
+    setState("pending");
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => save(value), 900);
+  };
+
+  return (
+    <div className="mt-5 border-t border-black/5 pt-4">
+      <label className="label" htmlFor="me-note">
+        หมายเหตุถึงผู้จัด <span className="font-normal text-stone-400">(ไม่บังคับ)</span>
+      </label>
+      <textarea
+        id="me-note"
+        className="input min-h-20 resize-y"
+        maxLength={300}
+        disabled={locked}
+        placeholder="เช่น วันที่ 3 ช่วงบ่ายติดอบรม ออกได้หลัง 15:00"
+        value={note}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      <p className="hint flex flex-wrap justify-between gap-2">
+        <span>เห็นเฉพาะผู้จัด · บันทึกอัตโนมัติ</span>
+        <span className="tabular-nums">
+          {state === "pending" || state === "saving" ? "กำลังบันทึก… · " : state === "saved" ? "บันทึกแล้ว · " : ""}
+          {note.length}/300
+        </span>
+      </p>
+      {error && <ErrorNote message={error} />}
+    </div>
   );
 }
 

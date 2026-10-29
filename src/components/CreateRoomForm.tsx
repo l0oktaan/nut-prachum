@@ -44,7 +44,11 @@ function RoomForm({ draft, onDismiss }: { draft: RoomDraft | null; onDismiss: ()
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const memberList = members.split(/\n|,/).map((n) => n.trim()).filter(Boolean);
+  // One name per line; a leading "*" marks a key member, e.g. "*ประธาน".
+  const memberLines = members.split(/\n|,/).map((n) => n.trim());
+  const nameOf = (line: string) => line.replace(/^\*\s*/, "");
+  const memberList = memberLines.map(nameOf).filter(Boolean);
+  const requiredList = memberLines.filter((l) => l.startsWith("*")).map(nameOf).filter(Boolean);
   const config: SlotConfig = {
     dates,
     startDate: "",
@@ -85,6 +89,7 @@ function RoomForm({ draft, onDismiss }: { draft: RoomDraft | null; onDismiss: ()
           dateSlots: cleanDateSlots(config, dateSlots),
           allowNewMembers,
           members: memberList,
+          required: requiredList,
         }),
       });
       saveRoom({ slug: res.slug, title, adminKey: res.adminKey });
@@ -215,13 +220,21 @@ function RoomForm({ draft, onDismiss }: { draft: RoomDraft | null; onDismiss: ()
         <div>
           <textarea
             className="input min-h-28 resize-y"
-            placeholder={"ใส่ชื่อทีละบรรทัด เช่น\nสมชาย ใจดี\nสมหญิง รักงาน"}
+            placeholder={"ใส่ชื่อทีละบรรทัด เช่น\n*ประธานกรรมการ\nสมชาย ใจดี\nสมหญิง รักงาน"}
             value={members}
             onChange={(e) => setMembers(e.target.value)}
           />
           <p className="hint">
-            {memberList.length > 0 && <span className="font-semibold text-ink">{memberList.length} คน · </span>}
+            {memberList.length > 0 && (
+              <span className="font-semibold text-ink">
+                {memberList.length} คน{requiredList.length > 0 && ` (สมาชิกหลัก ${requiredList.length} คน)`} ·{" "}
+              </span>
+            )}
             สมาชิกจะเลือกชื่อตัวเองจากรายการ ทำให้รู้ว่าใครตอบแล้ว/ยังไม่ตอบ และได้ลิงก์ส่วนตัวรายคน
+          </p>
+          <p className="hint">
+            ใส่ <b className="text-ink">*</b> หน้าชื่อ = <b className="text-ink">สมาชิกหลัก</b> ที่ต้องมา เช่น *ประธาน —
+            ระบบจะจัดอันดับช่วงที่สมาชิกหลักว่างครบไว้ก่อน
           </p>
         </div>
         <Switch

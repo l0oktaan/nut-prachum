@@ -55,6 +55,12 @@ ALTER TABLE rooms ADD COLUMN IF NOT EXISTS duration_days int NOT NULL DEFAULT 1;
 
 -- Per-date slot keys, e.g. {"2026-11-03": [0]} (a date not listed offers every slot).
 ALTER TABLE rooms ADD COLUMN IF NOT EXISTS date_slots jsonb NOT NULL DEFAULT '{}';
+
+-- Key members the meeting needs (ranked first when they can all make it).
+ALTER TABLE participants ADD COLUMN IF NOT EXISTS required boolean NOT NULL DEFAULT false;
+
+-- A member's note to the organizer, e.g. "busy until 15:00 on the 3rd".
+ALTER TABLE participants ADD COLUMN IF NOT EXISTS note text NOT NULL DEFAULT '';
 `;
 
 export async function migrate(retries = 15): Promise<void> {

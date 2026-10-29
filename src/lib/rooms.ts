@@ -42,6 +42,8 @@ interface ParticipantRow {
   name: string;
   token: string;
   invited: boolean;
+  required: boolean;
+  note: string;
   claimed_at: Date | null;
   last_seen_at: Date | null;
   responded_at: Date | null;
@@ -81,6 +83,7 @@ function toParticipantPublic(p: ParticipantRow): ParticipantPublic {
     id: p.id,
     name: p.name,
     invited: p.invited,
+    required: p.required,
     claimed: p.claimed_at !== null,
     respondedAt: iso(p.responded_at),
   };
@@ -89,6 +92,7 @@ function toParticipantPublic(p: ParticipantRow): ParticipantPublic {
 function toParticipantAdmin(p: ParticipantRow): ParticipantAdmin {
   return {
     ...toParticipantPublic(p),
+    note: p.note,
     token: p.token,
     claimedAt: iso(p.claimed_at),
     lastSeenAt: iso(p.last_seen_at),
@@ -97,7 +101,7 @@ function toParticipantAdmin(p: ParticipantRow): ParticipantAdmin {
 }
 
 export function toMe(p: ParticipantRow): Me {
-  return { id: p.id, name: p.name, token: p.token, respondedAt: iso(p.responded_at) };
+  return { id: p.id, name: p.name, token: p.token, respondedAt: iso(p.responded_at), note: p.note };
 }
 
 /* ---------------------------------- rooms --------------------------------- */
@@ -115,6 +119,8 @@ export interface CreateRoomInput {
   dateSlots: Record<string, number[]>;
   allowNewMembers: boolean;
   members: string[];
+  /** Names (from `members`) marked as key members. */
+  required: string[];
 }
 
 export async function createRoom(input: CreateRoomInput) {
@@ -154,11 +160,12 @@ export async function createRoom(input: CreateRoomInput) {
         await db.query("ROLLBACK TO SAVEPOINT slug_try");
       }
     }
+    const required = new Set(input.required.map((n) => n.toLowerCase()));
     for (const name of input.members) {
       await db.query(
-        `INSERT INTO participants (room_id, name, token, invited) VALUES ($1, $2, $3, true)
+        `INSERT INTO participants (room_id, name, token, invited, required) VALUES ($1, $2, $3, true, $4)
          ON CONFLICT DO NOTHING`,
-        [room.id, name, newSecret(18)],
+        [room.id, name, newSecret(18), required.has(name.toLowerCase())],
       );
     }
     return { slug: room.slug, adminKey };
@@ -347,6 +354,15 @@ export async function resetParticipant(roomId: string, id: string) {
     `UPDATE participants SET token = $3, claimed_at = NULL WHERE id = $1 AND room_id = $2`,
     [id, roomId, newSecret(18)],
   );
+}
+
+export async function setParticipantRequired(roomId: string, id: string, required: boolean) {
+  await query("UPDATE participants SET required = $3 WHERE id = $1 AND room_id = $2", [id, roomId, required]);
+}
+
+export async function setParticipantNote(id: string, note: string) {
+  const rows = await query<ParticipantRow>("UPDATE participants SET note = $2 WHERE id = $1 RETURNING *", [id, note]);
+  return rows[0] ?? null;
 }
 
 export async function renameParticipant(roomId: string, id: string, name: string) {

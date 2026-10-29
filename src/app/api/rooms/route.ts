@@ -28,6 +28,7 @@ const CreateRoom = z
     dateSlots: dateSlotsSchema.default({}),
     allowNewMembers: z.boolean().default(true),
     members: z.array(nameSchema).max(200, "รายชื่อสมาชิกมากเกินไป (ไม่เกิน 200 คน)").default([]),
+    required: z.array(nameSchema).max(200).default([]),
   })
   .refine((v) => v.timeMode !== "hour" || v.dayEndMin - v.dayStartMin >= v.slotMinutes, {
     message: "เวลาสิ้นสุดต้องหลังเวลาเริ่มต้น",

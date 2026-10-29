@@ -16,11 +16,13 @@ import {
   Lock,
   Megaphone,
   MessageCircle,
+  MessageSquareText,
   RefreshCw,
   RotateCcw,
   Settings,
   ShieldAlert,
   Sparkles,
+  Star,
   Trash2,
   UserPlus,
   Users,
@@ -40,7 +42,7 @@ import {
   useClientValue,
 } from "@/lib/client";
 import { candidates, rank, tally } from "@/lib/results";
-import { announcementText } from "@/lib/calendar";
+import { announcementText, gcalShortUrl } from "@/lib/calendar";
 import {
   blockSlots,
   blockStarts,
@@ -144,7 +146,8 @@ export function AdminView({ slug }: { slug: string }) {
   const adminUrl = `${origin}/r/${slug}/admin#key=${adminKey}`;
   const responded = participants.filter((p) => p.respondedAt);
   const pending = participants.filter((p) => !p.respondedAt);
-  const best = rank(candidates(room, tally(room, data.cells)), 1)[0];
+  const keyIds = participants.filter((p) => p.required && p.respondedAt).map((p) => p.id);
+  const best = rank(candidates(room, tally(room, data.cells)), 1, keyIds)[0];
   const inviteText = `📅 ช่วยเลือกวันเวลาที่สะดวกสำหรับ “${room.title}” หน่อยครับ/ค่ะ\n${memberUrl}`;
   // Same topic, members and time settings in a new room; the organizer only picks new dates and slots.
   const repeatMeeting = () => {
@@ -159,7 +162,7 @@ export function AdminView({ slug }: { slug: string }) {
       slotMinutes: room.slotMinutes,
       durationDays: room.durationDays,
       allowNewMembers: room.allowNewMembers,
-      members: participants.map((p) => p.name),
+      members: participants.map((p) => (p.required ? `*${p.name}` : p.name)),
     });
     router.push(`/?repeat=${slug}#create`);
   };
@@ -540,14 +543,31 @@ function MemberRow({
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">
           {p.name}
+          {p.required && <span className="chip ml-2 bg-ink px-2 py-0.5 text-neon">สมาชิกหลัก</span>}
           {!p.invited && <span className="ml-2 text-xs font-normal text-stone-400">(เพิ่มชื่อเอง)</span>}
         </p>
         <p className="flex items-center gap-2 text-xs text-stone-500">
           <span className={cx("chip px-2 py-0.5", status.cls)}>{status.label}</span>
           {status.when && <span>{timeAgo(status.when)}</span>}
         </p>
+        {p.note && (
+          <p className="mt-1.5 flex items-start gap-1.5 rounded-xl bg-canvas px-2.5 py-1.5 text-xs text-stone-700">
+            <MessageSquareText className="mt-px size-3.5 shrink-0 text-stone-400" />
+            <span className="break-words whitespace-pre-wrap">{p.note}</span>
+          </p>
+        )}
       </div>
       <div className="flex items-center gap-1">
+        <button
+          type="button"
+          aria-pressed={p.required}
+          title={p.required ? "เลิกเป็นสมาชิกหลัก" : "ตั้งเป็นสมาชิกหลัก (ต้องมา — จัดอันดับช่วงที่คนกลุ่มนี้ว่างครบก่อน)"}
+          className={cx("btn btn-sm", p.required ? "text-ink hover:bg-canvas" : "btn-ghost text-stone-400")}
+          disabled={busy}
+          onClick={() => call(url, { method: "PATCH", body: JSON.stringify({ action: "required", required: !p.required }) })}
+        >
+          <Star className={cx("size-3.5", p.required && "fill-neon")} />
+        </button>
         <CopyButton text={personalLink} label="ลิงก์ส่วนตัว" className="btn-ghost btn-sm" />
         <button
           type="button"
@@ -944,6 +964,7 @@ function Announcement({
       </div>
       <div className="flex flex-wrap gap-2 lg:w-52 lg:flex-col">
         <CopyButton text={text} label="คัดลอกข้อความประกาศ" className="btn-primary" />
+        <CopyButton text={gcalShortUrl(memberUrl)} label="คัดลอกลิงก์ Google Calendar" className="btn-secondary" />
         <a
           className="btn bg-[#06C755] text-white hover:brightness-95"
           href={`https://line.me/R/share?text=${encodeURIComponent(text)}`}

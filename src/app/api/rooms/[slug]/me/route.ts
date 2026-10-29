@@ -8,6 +8,7 @@ import {
   findParticipantByToken,
   getRoom,
   MAX_PARTICIPANTS,
+  setParticipantNote,
   toMe,
   touchParticipant,
 } from "@/lib/rooms";
@@ -66,6 +67,22 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
   await setSession(room.slug, participant.token);
   return json({ me: toMe(participant) });
+}
+
+const UpdateMe = z.object({ note: z.string().trim().max(300, "หมายเหตุยาวเกินไป (ไม่เกิน 300 ตัวอักษร)") });
+
+/** Saves the current participant's note to the organizer. */
+export async function PATCH(req: NextRequest, ctx: Ctx) {
+  const { slug } = await ctx.params;
+  const room = await getRoom(slug);
+  if (!room) return fail(404, "ไม่พบห้องนัดประชุมนี้");
+  if (room.is_locked) return fail(403, "ผู้จัดปิดรับคำตอบแล้ว");
+  const current = await readSessionParticipant(room);
+  if (!current) return fail(401, "กรุณาระบุตัวตนก่อน");
+  const body = await parseBody(req, UpdateMe);
+  if (!body.ok) return body.res;
+  const updated = await setParticipantNote(current.id, body.data.note);
+  return json({ me: updated ? toMe(updated) : null });
 }
 
 export async function DELETE(_req: NextRequest, ctx: Ctx) {

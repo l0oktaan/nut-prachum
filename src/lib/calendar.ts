@@ -42,6 +42,9 @@ export function describeMeeting(c: SlotConfig, date: string, slot: number): stri
   return `${when} · ${slotLabel(c, slot)}`;
 }
 
+/** Our short link that redirects to Google Calendar for the room's confirmed meeting. */
+export const gcalShortUrl = (roomUrl: string) => `${roomUrl}/gcal`;
+
 export function googleCalendarUrl(c: SlotConfig, m: MeetingInfo, roomUrl: string): string {
   const t = eventTimes(c, m);
   const params = new URLSearchParams({
@@ -92,7 +95,8 @@ export function announcementText(
     `🗓️ ${describeMeeting(c, m.date, m.slot)}`,
     attendance && `✅ สะดวก ${attendance.yes}/${attendance.total} คน`,
     m.description && `📍 ${m.description}`,
-    `เพิ่มลงปฏิทินได้ที่ ${roomUrl}`,
+    `📅 เพิ่มลง Google Calendar: ${gcalShortUrl(roomUrl)}`,
+    `🔗 รายละเอียด / ไฟล์ .ics: ${roomUrl}`,
   ]
     .filter(Boolean)
     .join("\n");

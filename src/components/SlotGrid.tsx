@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { Check, Star } from "lucide-react";
 import { cx } from "./ui";
+import { useHolidays } from "@/lib/client";
 import {
   cellKey,
   dateParts,
@@ -34,6 +35,7 @@ function GridFrame({
     [config, dates],
   );
   const compact = config.timeMode === "hour";
+  const holidays = useHolidays();
 
   return (
     <div className="scroll-thin -mx-1 overflow-x-auto px-1 pb-2">
@@ -46,22 +48,23 @@ function GridFrame({
         <div className="sticky left-0 z-10 bg-white" />
         {dates.map((d) => {
           const p = dateParts(d);
+          const holiday = holidays[d];
           const Header = onDateClick ? "button" : "div";
           return (
             <Header
               key={d}
               type={onDateClick ? "button" : undefined}
               onClick={onDateClick ? () => onDateClick(d) : undefined}
-              title={onDateClick ? "คลิกเพื่อเลือก/ยกเลิกทั้งวัน" : undefined}
+              title={[holiday, onDateClick && "คลิกเพื่อเลือก/ยกเลิกทั้งวัน"].filter(Boolean).join(" · ") || undefined}
               className={cx(
                 "flex flex-col items-center rounded-lg py-1.5 leading-tight",
                 onDateClick && "transition hover:bg-white hover:shadow-sm",
               )}
             >
-              <span className={cx("text-xs", p.weekend ? "text-lilac" : "text-stone-400")}>
+              <span className={cx("text-xs", holiday ? "text-rose-500" : p.weekend ? "text-lilac" : "text-stone-400")}>
                 {p.weekday}
               </span>
-              <span className="text-lg font-extrabold text-ink">{p.day}</span>
+              <span className={cx("text-lg font-extrabold", holiday ? "text-rose-500" : "text-ink")}>{p.day}</span>
               <span className="text-xs text-stone-400">{p.month}</span>
             </Header>
           );

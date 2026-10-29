@@ -25,6 +25,9 @@ export async function parseBody<S extends z.ZodType>(req: NextRequest, schema: S
 
 export const adminKeyOf = (req: NextRequest) => req.headers.get("x-admin-key");
 
+/** The site's public origin for links we hand out — behind a proxy the request origin can be the container's. */
+export const publicOrigin = (req: NextRequest) => process.env.APP_URL || req.nextUrl.origin;
+
 /** Resolves the room only when the request carries its admin key. */
 export async function requireAdmin(req: NextRequest, slug: string) {
   const room = await getAdminRoom(slug, adminKeyOf(req));
