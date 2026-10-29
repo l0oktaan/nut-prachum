@@ -948,7 +948,7 @@ function Announcement({
           ประกาศวันประชุมให้สมาชิก
           <span
             className={cx(
-              "chip ml-1",
+              "chip ml-1 whitespace-nowrap",
               room.isLocked ? "bg-ink text-neon" : "bg-lilac-soft text-violet-800",
             )}
           >
@@ -958,11 +958,12 @@ function Announcement({
         <p className="mt-1 mb-3 text-sm text-stone-500">
           สมาชิกที่เปิดลิงก์จะเห็นวันประชุมทันที — คัดลอกข้อความนี้ไปแจ้งในกลุ่มแชตได้เลย
         </p>
-        <pre className="rounded-2xl bg-canvas p-4 font-sans text-sm leading-relaxed whitespace-pre-wrap text-ink">
+        <pre className="rounded-2xl bg-canvas p-4 font-sans text-sm leading-relaxed wrap-anywhere whitespace-pre-wrap text-ink">
           {text}
         </pre>
       </div>
-      <div className="flex flex-wrap gap-2 lg:w-52 lg:flex-col">
+      {/* Column sizes to the widest button; buttons stretch to match. */}
+      <div className="flex flex-wrap gap-2 lg:flex-col lg:flex-nowrap">
         <CopyButton text={text} label="คัดลอกข้อความประกาศ" className="btn-primary" />
         <CopyButton text={gcalShortUrl(memberUrl)} label="คัดลอกลิงก์ Google Calendar" className="btn-secondary" />
         <a
