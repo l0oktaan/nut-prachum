@@ -2,6 +2,8 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { adminKeyOf, fail, json, parseBody, requireAdmin } from "@/lib/api";
 import { emailAdminLink } from "@/lib/admin-link-mail";
+import { toRoomPublic } from "@/lib/rooms";
+import { getDates } from "@/lib/slots";
 
 const EmailLink = z.object({ email: z.email("อีเมลไม่ถูกต้อง").max(254) });
 
@@ -13,7 +15,7 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/rooms/[slug
   if (!body.ok) return body.res;
   const outcome = await emailAdminLink(
     req,
-    { slug: auth.room.slug, title: auth.room.title, adminKey: adminKeyOf(req)! },
+    { slug: auth.room.slug, title: auth.room.title, dates: getDates(toRoomPublic(auth.room)), adminKey: adminKeyOf(req)! },
     body.data.email,
   );
   if (outcome === "throttled") return fail(429, "ส่งอีเมลบ่อยเกินไป กรุณาลองใหม่ภายหลัง");

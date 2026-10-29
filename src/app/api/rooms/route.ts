@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     members: uniqueNames(input.members),
   });
   const mail = organizerEmail
-    ? await emailAdminLink(req, { slug: result.slug, title: input.title, adminKey: result.adminKey }, organizerEmail)
+    ? await emailAdminLink(req, { slug: result.slug, title: input.title, dates: config.dates, adminKey: result.adminKey }, organizerEmail)
     : null;
   return json({ ...result, mail }, 201);
 }

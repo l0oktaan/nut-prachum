@@ -1,13 +1,11 @@
 import "server-only";
 import { after, type NextRequest } from "next/server";
 import { publicOrigin } from "./api";
+import { adminLinkEmail } from "./email-templates";
 import { mailEnabled, maskEmail, mayMail, removeSentCopy, sendMail, type Outgoing } from "./mail";
 import { clientIp, logSecurityEvent } from "./security-log";
 
 export type MailOutcome = "sent" | "failed" | "throttled" | "disabled";
-
-const escapeHtml = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /**
  * Emails a room's admin link to its organizer. The address is used for this one send and never
@@ -15,7 +13,7 @@ const escapeHtml = (s: string) =>
  */
 export async function emailAdminLink(
   req: NextRequest,
-  room: { slug: string; title: string; adminKey: string },
+  room: { slug: string; title: string; dates: string[]; adminKey: string },
   to: string,
 ): Promise<MailOutcome> {
   if (!mailEnabled()) return "disabled";
@@ -26,33 +24,15 @@ export async function emailAdminLink(
   }
 
   const origin = publicOrigin(req);
-  const adminUrl = `${origin}/r/${room.slug}/admin#key=${room.adminKey}`;
-  const memberUrl = `${origin}/r/${room.slug}`;
-  const title = room.title.slice(0, 120);
   const mail: Outgoing = {
     to,
-    subject: `ลิงก์ผู้ดูแลห้องนัดประชุม “${title}”`,
-    text: [
-      `ลิงก์ผู้ดูแลห้องนัดประชุม “${title}”`,
-      "",
-      "ใช้ลิงก์นี้กลับมาดูผลและจัดการห้อง — เก็บไว้เป็นความลับ ใครมีลิงก์นี้จะแก้ไขห้องได้",
-      adminUrl,
-      "",
-      "ลิงก์สำหรับสมาชิก (ส่งในกลุ่มแชตได้):",
-      memberUrl,
-      "",
-      "—",
-      "อีเมลนี้ส่งอัตโนมัติจาก นัดประชุม (setmeet.tontaan.tech) กรุณาอย่าตอบกลับ",
-      "ระบบไม่ได้เก็บอีเมลของคุณ",
-    ].join("\n"),
-    html: `<div style="font-family:Tahoma,'Leelawadee UI',sans-serif;font-size:15px;line-height:1.6;color:#1a1a1c;max-width:560px">
-<p style="font-size:18px;font-weight:bold;margin:0 0 12px">ลิงก์ผู้ดูแลห้องนัดประชุม “${escapeHtml(title)}”</p>
-<p style="margin:0 0 16px">ใช้ลิงก์นี้กลับมาดูผลและจัดการห้อง — <b>เก็บไว้เป็นความลับ</b> ใครมีลิงก์นี้จะแก้ไขห้องได้</p>
-<p style="margin:0 0 20px"><a href="${escapeHtml(adminUrl)}" style="display:inline-block;background:#1a1a1c;color:#fff;text-decoration:none;padding:10px 20px;border-radius:999px;font-weight:bold">เปิดหน้าผู้ดูแล</a></p>
-<p style="margin:0 0 4px;color:#6b6b70;font-size:13px">ลิงก์สำหรับสมาชิก (ส่งในกลุ่มแชตได้)</p>
-<p style="margin:0 0 24px"><a href="${escapeHtml(memberUrl)}">${escapeHtml(memberUrl)}</a></p>
-<p style="margin:0;color:#9a9aa0;font-size:12px">อีเมลนี้ส่งอัตโนมัติจาก นัดประชุม (setmeet.tontaan.tech) กรุณาอย่าตอบกลับ · ระบบไม่ได้เก็บอีเมลของคุณ</p>
-</div>`,
+    ...adminLinkEmail({
+      title: room.title.slice(0, 120),
+      dates: room.dates,
+      adminUrl: `${origin}/r/${room.slug}/admin#key=${room.adminKey}`,
+      memberUrl: `${origin}/r/${room.slug}`,
+      origin,
+    }),
   };
 
   const res = await sendMail(mail);

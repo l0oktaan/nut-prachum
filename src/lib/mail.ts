@@ -94,6 +94,10 @@ export interface Outgoing {
 
 export type SendResult = { ok: true; ref: string } | { ok: false; reason: string };
 
+/** Puts the reference where a template asks for it ({{ref}}), or appends it. */
+const withRef = (body: string, ref: string, append: string) =>
+  body.includes("{{ref}}") ? body.replaceAll("{{ref}}", ref) : body + append;
+
 /** Sends one email; the body gets a random reference so the Sent copy can be found and removed. */
 export async function sendMail(m: Outgoing): Promise<SendResult> {
   if (!mailEnabled()) return { ok: false, reason: "mail not configured" };
@@ -106,8 +110,8 @@ export async function sendMail(m: Outgoing): Promise<SendResult> {
         to: [m.to],
         displayName: displayName(),
         subject: m.subject,
-        text: `${m.text}\n\nรหัสอ้างอิง: ${ref}`,
-        html: `${m.html}<p style="color:#9a9aa0;font-size:11px">รหัสอ้างอิง: ${ref}</p>`,
+        text: withRef(m.text, ref, `\n\nรหัสอ้างอิง: ${ref}`),
+        html: withRef(m.html, ref, `<p style="color:#9a9aa0;font-size:11px">รหัสอ้างอิง: ${ref}</p>`),
       }),
     });
     if (res.status === 204 || res.status === 200 || res.status === 202) return { ok: true, ref };
