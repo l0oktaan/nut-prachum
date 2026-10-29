@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nutprachum}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nutprachum}
+      POSTGRES_DB: ${POSTGRES_DB:-nutprachum}
+      TZ: Asia/Bangkok
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      # Exposed for local development (npm run dev). Remove in production.
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-nutprachum}:${POSTGRES_PASSWORD:-nutprachum}@db:5432/${POSTGRES_DB:-nutprachum}
+      # Set to "true" when served over HTTPS (behind a reverse proxy).
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      TZ: Asia/Bangkok
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

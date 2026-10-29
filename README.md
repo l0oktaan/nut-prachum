@@ -1,36 +1,156 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Set up a meeting นัดประชุม — หาวันที่ทุกคนว่างตรงกัน
 
-## Getting Started
+เว็บแอปสำหรับนัดประชุม: ผู้จัด (เลขานุการหรือใครก็ได้) สร้างห้อง แตะเลือกวันที่บนปฏิทิน (แสดงปี พ.ศ.) แล้วส่งลิงก์ให้สมาชิก
+สมาชิกเลือกวันเวลาที่ตัวเองสะดวก ระบบสรุปช่วงที่ว่างตรงกันมากที่สุดให้ **ไม่ต้องสมัครสมาชิก ไม่ต้องล็อกอิน**
+แต่ยังรู้ได้ว่าใครเข้ามาแล้ว ใครตอบแล้ว และใครยังไม่ตอบ
 
-First, run the development server:
+**Stack:** Next.js 16 (App Router — ทั้ง frontend และ API) · PostgreSQL 17 · Tailwind CSS 4 · Docker Compose
+
+## เริ่มใช้งาน
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env        # แก้ POSTGRES_PASSWORD
+docker compose up -d --build
+# เปิด http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+ตารางในฐานข้อมูลถูกสร้างอัตโนมัติตอนแอปเริ่มทำงาน ([src/instrumentation.ts](src/instrumentation.ts))
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### พัฒนาบนเครื่อง
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+docker compose up -d db
+cp .env.example .env.local  # ใช้ DATABASE_URL ที่ชี้ไป localhost
+npm install
+npm run dev
+```
 
-## Learn More
+## การทำงาน (User flow)
 
-To learn more about Next.js, take a look at the following resources:
+```
+ผู้จัด                          ระบบ                                สมาชิก
+──────                          ────                                ──────
+กรอกหัวข้อ, แตะเลือกวัน, ──▶  สร้างห้อง + admin key
+รายชื่อสมาชิก (ไม่บังคับ)      ◀── ลิงก์ผู้ดูแล /r/{slug}/admin#key=…
+                                    ลิงก์สมาชิก  /r/{slug}
+ส่งลิงก์สมาชิกในกลุ่ม LINE ───────────────────────────────────▶  เปิดลิงก์
+                                                                    “คุณคือใคร?” → เลือกชื่อ / พิมพ์ชื่อ
+                                ออก token ส่วนตัว → cookie  ──▶   ระบบจำไว้บนอุปกรณ์นี้
+                                                                    ลากเลือกช่อง สะดวก / ถ้าจำเป็น
+                                บันทึกอัตโนมัติ ◀──────────────────
+ดูสถานะรายคน + heatmap  ◀──   รวมผล, จัดอันดับช่วงที่ดีที่สุด
+กด “ยืนยันเป็นวันประชุม” ──▶  แสดงแบนเนอร์สรุปวันให้ทุกคน   ──▶  เพิ่มลง Google Calendar / .ics
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## การระบุตัวตนโดยไม่ต้องล็อกอิน
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| ใคร | ยืนยันตัวตนด้วย | หมายเหตุ |
+|---|---|---|
+| ผู้จัด | **admin key** ใน `#hash` ของลิงก์ผู้ดูแล | อยู่หลัง `#` จึงไม่ถูกส่งไปเซิร์ฟเวอร์หรือบันทึกใน log; เก็บใน DB เป็น SHA-256; ส่งมากับ header `x-admin-key`; เบราว์เซอร์ที่สร้างห้องจำไว้ใน localStorage |
+| สมาชิก | **participant token** (สุ่ม 144 บิต) ใน cookie แบบ `httpOnly` แยกต่อห้อง | ได้มาตอนเลือกชื่อ/พิมพ์ชื่อครั้งแรก อายุ 180 วัน |
+| สมาชิก (อุปกรณ์อื่น) | **ลิงก์ส่วนตัว** `/r/{slug}#t={token}` | ผู้จัดคัดลอกส่งให้รายคนได้ หรือสมาชิกคัดลอกเองจากปุ่ม “ลิงก์ส่วนตัว” |
 
-## Deploy on Vercel
+กันการสวมรอย:
+- ชื่อในรายการที่ผู้จัดกำหนด **ถูกล็อกทันทีเมื่อมีคนเลือก** คนอื่นจะเลือกชื่อนั้นซ้ำไม่ได้ ต้องใช้ลิงก์ส่วนตัว
+- ถ้ามีคนเลือกชื่อผิด ผู้จัดกด “ออกลิงก์ใหม่” เพื่อยกเลิก token เดิมและปลดล็อกชื่อ
+- ถ้าต้องการความแน่นอนสูงสุด ให้ผู้จัดส่ง **ลิงก์ส่วนตัวรายคน** แทนลิงก์รวม และปิด “อนุญาตให้เพิ่มชื่อเอง”
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+สถานะที่ผู้จัดเห็นต่อสมาชิกแต่ละคน: **ยังไม่เปิด** → **เปิดลิงก์แล้ว** (พร้อมเวลาที่เข้าล่าสุด) → **ตอบแล้ว**
+และมีปุ่ม “คัดลอกข้อความทวงคำตอบ” ที่รวมรายชื่อคนที่ยังไม่ตอบไว้ให้วางในแชต
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## รูปแบบเวลา
+
+| โหมด | ช่องต่อวัน | เหมาะกับ |
+|---|---|---|
+| ทั้งวัน | 1 | นัดคร่าว ๆ ช่วงยาว |
+| เช้า / บ่าย / เย็น | 3 (09–12, 13–16, 17–20) | ค่าเริ่มต้น เลือกง่ายบนมือถือ |
+| รายชั่วโมง | ตามช่วงที่กำหนด (ช่องละ 30/60 นาที) | ช่วงวันที่สั้น ต้องการเวลาละเอียด |
+
+ผู้จัดแตะเลือกวันทีละวันบนปฏิทิน (สูงสุด 62 วัน ภายใน 1 ปี) หรือแตะชื่อวันเพื่อเลือกทั้งคอลัมน์ แต่ละช่องตอบได้ 2 ระดับ: **สะดวก** (นับ 1) และ **ถ้าจำเป็น** (นับ 0.5)
+การจัดอันดับเรียงตามจำนวน “สะดวก” → “ถ้าจำเป็น” → วันที่เร็วกว่า
+
+## ประชุมหลายวันติดกัน
+
+ตอนสร้างห้อง (หรือแก้ภายหลังในแท็บ "ตั้งค่า") ระบุ **"ประชุมติดกันกี่วัน"** ได้ 1–14 วัน
+- ชุดวันต้องเป็นวันตามปฏิทินที่ต่อเนื่องกัน และทุกวันต้องอยู่ในวันที่ผู้จัดเลือก ใช้ช่วงเวลาเดียวกันทุกวัน
+- สมาชิกยังตอบเป็นรายวันเหมือนเดิม ระบบนับคนในชุดเฉพาะคนที่ว่างครบทุกวัน — "สะดวก" ถ้าสะดวกทุกวัน, "ถ้าจำเป็น" ถ้ามีบางวันเป็นถ้าจำเป็น
+- เปลี่ยนจำนวนวันได้โดยคำตอบไม่หาย; ถ้าวันประชุมที่สรุปไว้ไม่ครบชุดแล้วจะถูกยกเลิกให้อัตโนมัติ
+- ไฟล์ปฏิทิน: แบบทั้งวันเป็น event เดียวคลุมทุกวัน, แบบมีเวลาเป็น event ที่ซ้ำทุกวัน N วัน (RRULE)
+
+## สรุปและปิดรับคำตอบ
+
+ผู้ดูแลเลือกช่วงเวลาในแท็บ "ผลรวม" แล้วกด **"สรุปและปิดรับคำตอบ"** — ยืนยันวันประชุมและล็อกคำตอบในครั้งเดียว
+(หรือ "ยืนยันวันอย่างเดียว" ถ้ายังอยากรับคำตอบต่อ) จากนั้นหน้าผู้ดูแลจะมีการ์ด **"ประกาศวันประชุมให้สมาชิก"**
+พร้อมข้อความสำเร็จรูป ปุ่มคัดลอก/แชร์ผ่าน LINE และปุ่ม "ยกเลิกการสรุป" เพื่อเปิดรับคำตอบอีกครั้ง
+
+## ฐานข้อมูล
+
+```
+rooms                          participants                     availability
+──────────────────             ──────────────────────           ─────────────────────
+id            uuid PK    ◀──┐  id            uuid PK      ◀──┐  participant_id uuid FK ┐
+slug          text UQ       └─ room_id       uuid FK         └─ date           date    ├ PK
+title, description             name          text  (UQ ต่อห้อง)   slot           int     ┘
+organizer_name                 token         text UQ             level          1 | 2
+dates  date[] (วันที่เลือก)    invited       bool  (ผู้จัดเพิ่ม)
+start_date, end_date (min/max)
+exclude_weekends               claimed_at    (เลือกชื่อแล้ว)
+time_mode  day|period|hour     last_seen_at  (เปิดลิงก์ล่าสุด)
+day_start_min, day_end_min     responded_at  (ตอบล่าสุด)
+slot_minutes
+duration_days (ประชุมติดกันกี่วัน)
+allow_new_members, is_locked
+final_date, final_slot
+admin_key_hash
+```
+
+`slot` คือ index ช่วง (0–2) ในโหมดเช้า/บ่าย/เย็น หรือ “นาทีนับจากเที่ยงคืน” ในโหมดรายชั่วโมง
+
+## API
+
+| Method | Path | สิทธิ์ | ทำอะไร |
+|---|---|---|---|
+| POST | `/api/rooms` | ทุกคน | สร้างห้อง → `{ slug, adminKey }` |
+| GET | `/api/rooms/:slug` | ทุกคน | ข้อมูลห้อง + รายชื่อ + คำตอบทั้งหมด |
+| GET | `/api/rooms/:slug/me` | cookie | ฉันคือใคร (และบันทึกเวลาเข้าชม) |
+| POST | `/api/rooms/:slug/me` | — | ระบุตัวตนด้วย `{token}` / `{participantId}` / `{name}` → ตั้ง cookie |
+| DELETE | `/api/rooms/:slug/me` | cookie | ออกจากชื่อนี้ (“ไม่ใช่ฉัน”) |
+| PUT | `/api/rooms/:slug/availability` | cookie | บันทึกช่องที่เลือกทั้งหมดของฉัน |
+| GET | `/api/rooms/:slug/ics` | ทุกคน | ไฟล์ปฏิทินของวันที่สรุปแล้ว |
+| GET / PATCH / DELETE | `/api/rooms/:slug/admin` | admin key | ดูข้อมูลผู้ดูแล / แก้ตั้งค่า, ล็อก, สรุปวัน / ลบห้อง |
+| POST | `/api/rooms/:slug/admin/members` | admin key | เพิ่มรายชื่อ |
+| PATCH / DELETE | `/api/rooms/:slug/admin/members/:id` | admin key | ออกลิงก์ใหม่ (`reset`), เปลี่ยนชื่อ / ลบสมาชิก |
+
+## โครงสร้างโค้ด
+
+```
+src/
+  app/
+    page.tsx                  หน้าแรก + ฟอร์มสร้างห้อง
+    r/[slug]/page.tsx         หน้าสมาชิก
+    r/[slug]/admin/page.tsx   หน้าผู้ดูแล
+    api/rooms/...             Route Handlers
+  components/
+    SlotGrid.tsx              ตารางเลือกเวลา (ลากเลือกด้วยเมาส์ / แตะบนมือถือ) และ heatmap
+    ResultsPanel.tsx          ผลรวม, อันดับเวลาที่ดีที่สุด, ใครว่างช่องไหน
+    RoomView.tsx  AdminView.tsx  CreateRoomForm.tsx ...
+  lib/
+    slots.ts                  คำนวณวันที่/ช่วงเวลา (ใช้ร่วม client + server)
+    results.ts                รวมผลและจัดอันดับ
+    rooms.ts                  data access (pg)
+    session.ts tokens.ts      cookie และการสุ่ม/แฮช secret
+    migrate.ts                schema
+```
+
+## ข้อควรทำเมื่อใช้งานจริง
+
+- วางหลัง reverse proxy ที่มี HTTPS (Caddy / Nginx / Traefik) แล้วตั้ง `COOKIE_SECURE=true`
+- เปลี่ยน `POSTGRES_PASSWORD` และลบ `ports` ของ service `db` ออกจาก compose
+- สำรองข้อมูล volume `pgdata` ด้วย `pg_dump` เป็นระยะ
+
+## แนวทางต่อยอด
+
+- แจ้งเตือนผ่าน LINE Messaging API / อีเมล เมื่อสรุปวันหรือทวงคนที่ยังไม่ตอบ
+- อัปเดตผลแบบ real-time ด้วย Server-Sent Events แทนการ poll ทุก 20 วินาที
+- เชื่อม Google Calendar เพื่อดึงช่วงที่ไม่ว่างของสมาชิกมาแสดงอัตโนมัติ
+- กำหนดช่วงเวลาเองต่อห้อง (เช่น เช้า 08:30–12:00) และโหมดมืด (dark mode)

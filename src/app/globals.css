@@ -1,26 +1,134 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/* Design tokens — see Design.md: dark sidebar, light canvas, lime + soft-purple accents. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-jakarta), var(--font-plex-thai), ui-sans-serif, system-ui, sans-serif;
+  --color-ink: #1a1a1c;
+  --color-ink-soft: #2a2a2e;
+  --color-canvas: #f5f5f7;
+  --color-neon: #d4ff2b;
+  --color-lilac: #a78bfa;
+  --color-lilac-soft: #ddd6fe;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  color-scheme: light;
+}
+
+html {
+  /* 18px base — Thai script reads small at 16px. Every rem-based size scales with it. */
+  font-size: 112.5%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+@layer components {
+  .card {
+    @apply rounded-[24px] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03),0_10px_30px_-14px_rgba(0,0,0,0.12)];
+  }
+  .card-dark {
+    @apply rounded-[24px] bg-ink text-white shadow-[0_18px_40px_-18px_rgba(0,0,0,0.5)];
+  }
+  .card-neon {
+    @apply rounded-[24px] bg-neon text-ink;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-stone-600;
+  }
+  .hint {
+    @apply mt-1.5 text-xs text-stone-500;
+  }
+  .input {
+    @apply w-full rounded-2xl border border-transparent bg-canvas px-4 py-2.5 text-base text-ink outline-none transition placeholder:text-stone-400 focus:border-ink/15 focus:bg-white focus:ring-4 focus:ring-neon/50 disabled:opacity-60;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold whitespace-nowrap transition select-none active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40;
+  }
+  .btn-primary {
+    @apply bg-ink text-white hover:bg-black;
+  }
+  .btn-neon {
+    @apply bg-neon text-ink hover:brightness-95;
+  }
+  .btn-secondary {
+    @apply bg-white text-ink ring-1 ring-black/10 hover:bg-canvas;
+  }
+  .btn-ghost {
+    @apply text-stone-600 hover:bg-canvas hover:text-ink;
+  }
+  .btn-danger {
+    @apply text-rose-500 hover:bg-rose-50;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium;
+  }
+  /* Lime "+5%" style badge. */
+  .badge-up {
+    @apply inline-flex items-center gap-0.5 rounded-full bg-neon px-2 py-0.5 text-xs font-bold text-ink;
+  }
+  /* Round icon holder used in card headers. */
+  .icon-bubble {
+    @apply grid size-9 shrink-0 place-items-center rounded-full;
+  }
+  .card-title {
+    @apply flex items-center gap-2.5 font-semibold;
+  }
+  .metric {
+    @apply text-4xl leading-none font-extrabold tracking-tight tabular-nums;
+  }
+}
+
+/* Diagonal hatching for the muted bars in the dark chart card. */
+.bar-hatch {
+  background-color: #2f2f34;
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgb(255 255 255 / 0.07) 0 2px,
+    transparent 2px 7px
+  );
+}
+
+/* Thin, unobtrusive scrollbars for the scrolling grids. */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-stone-300) transparent;
+}
+.scroll-thin-dark {
+  scrollbar-width: thin;
+  scrollbar-color: #3a3a40 transparent;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-fade-up {
+  animation: fade-up 0.35s ease-out both;
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.85);
+  }
+  60% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.animate-pop {
+  animation: pop 0.22s ease-out;
 }
