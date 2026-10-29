@@ -192,6 +192,7 @@ interface Status {
   };
   disk: { total: number; free: number } | null;
   holidays: { count: number | null; fetchedAt: string | null; lastError: string | null };
+  mail: { enabled: boolean; from: string | null };
   events24h: Record<string, number>;
 }
 
@@ -301,6 +302,16 @@ function StatusTab({ onError }: { onError: (e: unknown) => void }) {
               </div>
             </div>
           )}
+          <Row
+            k="อีเมล"
+            v={
+              s.mail.enabled ? (
+                `${s.mail.from} · ส่ง 24 ชม. ${n(s.events24h.email_sent ?? 0)}${s.events24h.email_failed ? ` · ล้มเหลว ${s.events24h.email_failed}` : ""}`
+              ) : (
+                <span className="text-stone-500">ปิดอยู่</span>
+              )
+            }
+          />
           <Row
             k="ข้อมูลวันหยุด"
             v={
@@ -636,6 +647,10 @@ const EVENT_LABEL: Record<string, { label: string; bad?: boolean }> = {
   superadmin_room_deleted: { label: "super admin ลบห้อง" },
   superadmin_admin_key_reset: { label: "ออกลิงก์ผู้ดูแลใหม่" },
   superadmin_cleanup: { label: "ล้างข้อมูลขยะ" },
+  email_sent: { label: "ส่งลิงก์ผู้ดูแลทางอีเมล" },
+  email_failed: { label: "ส่งอีเมลไม่สำเร็จ", bad: true },
+  email_throttled: { label: "ส่งอีเมลถี่เกินไป (ถูกจำกัด)", bad: true },
+  email_copy_kept: { label: "ลบสำเนาใน Sent ไม่ได้", bad: true },
 };
 
 function SecurityTab({ onError }: { onError: (e: unknown) => void }) {

@@ -42,6 +42,7 @@ function RoomForm({ draft, onDismiss }: { draft: RoomDraft | null; onDismiss: ()
   const [title, setTitle] = useState(draft?.title ?? "");
   const [description, setDescription] = useState(draft?.description ?? "");
   const [organizerName, setOrganizerName] = useState(draft?.organizerName ?? "");
+  const [organizerEmail, setOrganizerEmail] = useState("");
   const [dates, setDates] = useState<string[]>([]);
   const [timeMode, setTimeMode] = useState<TimeMode>(draft?.timeMode ?? "period");
   const [dayStartMin, setDayStartMin] = useState(draft?.dayStartMin ?? 540);
@@ -100,7 +101,7 @@ function RoomForm({ draft, onDismiss }: { draft: RoomDraft | null; onDismiss: ()
     setBusy(true);
     setError(null);
     try {
-      const res = await api<{ slug: string; adminKey: string }>("/api/rooms", {
+      const res = await api<{ slug: string; adminKey: string; mail: string | null }>("/api/rooms", {
         method: "POST",
         body: JSON.stringify({
           title,
@@ -117,11 +118,12 @@ function RoomForm({ draft, onDismiss }: { draft: RoomDraft | null; onDismiss: ()
           allowNewMembers,
           members: memberList,
           required: requiredList,
+          organizerEmail: organizerEmail.trim() || undefined,
         }),
       });
       saveRoom({ slug: res.slug, title, adminKey: res.adminKey });
       if (draft) clearDraft(draft.fromSlug);
-      router.push(`/r/${res.slug}/admin#key=${res.adminKey}&new=1`);
+      router.push(`/r/${res.slug}/admin#key=${res.adminKey}&new=1${res.mail ? `&mail=${res.mail}` : ""}`);
     } catch (err) {
       setError((err as Error).message);
       setBusy(false);
@@ -187,6 +189,22 @@ function RoomForm({ draft, onDismiss }: { draft: RoomDraft | null; onDismiss: ()
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
+        </div>
+        <div>
+          <label className="label" htmlFor="org-email">
+            อีเมลของคุณ <span className="font-normal text-stone-400">(ไม่บังคับ)</span>
+          </label>
+          <input
+            id="org-email"
+            type="email"
+            className="input"
+            placeholder="name@example.com"
+            maxLength={254}
+            autoComplete="email"
+            value={organizerEmail}
+            onChange={(e) => setOrganizerEmail(e.target.value)}
+          />
+          <p className="hint">ส่งลิงก์ผู้ดูแลไปให้เก็บไว้ กันลิงก์หาย — ระบบไม่เก็บอีเมลนี้</p>
         </div>
       </Section>
 

@@ -12,6 +12,7 @@ import {
   scheduleError,
   uniqueNames,
 } from "@/lib/api";
+import { emailAdminLink } from "@/lib/admin-link-mail";
 import { createRoom } from "@/lib/rooms";
 import { cleanDateSlots, type SlotConfig } from "@/lib/slots";
 
@@ -31,6 +32,8 @@ const CreateRoom = z
     allowNewMembers: z.boolean().default(true),
     members: z.array(nameSchema).max(200, "รายชื่อสมาชิกมากเกินไป (ไม่เกิน 200 คน)").default([]),
     required: z.array(nameSchema).max(200).default([]),
+    // Only used to email the admin link right now — never stored.
+    organizerEmail: z.email("อีเมลไม่ถูกต้อง").max(254).optional(),
   })
   .refine((v) => v.timeMode !== "hour" || v.dayEndMin - v.dayStartMin >= v.slotMinutes, {
     message: "เวลาสิ้นสุดต้องหลังเวลาเริ่มต้น",
@@ -49,10 +52,14 @@ export async function POST(req: NextRequest) {
   config.dateSlots = cleanDateSlots(config, body.data.dateSlots);
   const problem = scheduleError(config);
   if (problem) return fail(400, problem);
+  const { organizerEmail, ...input } = body.data;
   const result = await createRoom({
-    ...body.data,
+    ...input,
     dateSlots: config.dateSlots,
-    members: uniqueNames(body.data.members),
+    members: uniqueNames(input.members),
   });
-  return json(result, 201);
+  const mail = organizerEmail
+    ? await emailAdminLink(req, { slug: result.slug, title: input.title, adminKey: result.adminKey }, organizerEmail)
+    : null;
+  return json({ ...result, mail }, 201);
 }

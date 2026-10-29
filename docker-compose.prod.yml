@@ -15,6 +15,9 @@ services:
       # Enables /superadmin (unset or under 24 characters = the page doesn't exist).
       SUPERADMIN_TOKEN: ${SUPERADMIN_TOKEN:-}
       TRAEFIK_LOG_DIR: /var/log/traefik-host
+      # Hostinger Mail API: emails organizers their admin link from this mailbox (unset key = off).
+      HOSTINGER_MAIL_API_KEY: ${HOSTINGER_MAIL_API_KEY:-}
+      MAIL_FROM: admin@tontaan.tech
     volumes:
       # Traefik's access log, read-only, for the super admin security tab.
       - /var/log/traefik:/var/log/traefik-host:ro

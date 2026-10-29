@@ -14,6 +14,7 @@ import {
   Eye,
   Link as LinkIcon,
   Lock,
+  Mail,
   Megaphone,
   MessageCircle,
   MessageSquareText,
@@ -72,6 +73,7 @@ export function AdminView({ slug }: { slug: string }) {
     undefined,
   );
   const isNew = useClientValue(() => readHashParam("new") === "1", false);
+  const mailed = useClientValue(() => readHashParam("mail"), null);
   const origin = useClientValue(() => window.location.origin, "");
   const [data, setData] = useState<AdminSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -182,6 +184,14 @@ export function AdminView({ slug }: { slug: string }) {
             <p className="text-ink/70">
               ส่ง “ลิงก์สำหรับสมาชิก” ด้านล่างให้ทุกคน และเก็บ “ลิงก์ผู้ดูแล” ไว้กลับมาดูผล
             </p>
+            {mailed && (
+              <p className="mt-1 flex items-center gap-1.5 font-semibold">
+                <Mail className="size-4" />
+                {mailed === "sent"
+                  ? "ส่งลิงก์ผู้ดูแลไปที่อีเมลของคุณแล้ว"
+                  : "ส่งอีเมลไม่สำเร็จ — คัดลอกลิงก์ผู้ดูแลเก็บไว้เอง หรือลองส่งใหม่ด้านล่าง"}
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -253,6 +263,7 @@ export function AdminView({ slug }: { slug: string }) {
             ใช้ลิงก์นี้กลับมาจัดการห้อง ใครมีลิงก์นี้จะแก้ไขห้องได้ — เบราว์เซอร์นี้จำไว้ให้แล้ว
           </p>
           <CopyField value={adminUrl} label="ลิงก์ผู้ดูแล" />
+          <EmailAdminLink slug={slug} adminKey={adminKey} />
         </section>
       </div>
 
@@ -912,6 +923,63 @@ function DatesEditor({
         </div>
       </div>
     </section>
+  );
+}
+
+/* ------------------------------ email the link ----------------------------- */
+
+/** Sends this room's admin link to an address the organizer types (not stored anywhere). */
+function EmailAdminLink({ slug, adminKey }: { slug: string; adminKey: string }) {
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  const send = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setState("sending");
+    setError(null);
+    try {
+      await api(`/api/rooms/${slug}/admin/email`, { method: "POST", adminKey, body: JSON.stringify({ email }) });
+      setState("sent");
+    } catch (err) {
+      setError((err as Error).message);
+      setState("idle");
+    }
+  };
+
+  if (!open) {
+    return (
+      <button type="button" className="btn btn-ghost btn-sm mt-2 -ml-3" onClick={() => setOpen(true)}>
+        <Mail className="size-3.5" /> ส่งลิงก์นี้เข้าอีเมล
+      </button>
+    );
+  }
+  return (
+    <form onSubmit={send} className="mt-3 flex flex-col gap-2">
+      <div className="flex gap-2">
+        <input
+          type="email"
+          required
+          className="input py-2 text-sm"
+          placeholder="อีเมลของคุณ"
+          maxLength={254}
+          autoComplete="email"
+          value={email}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            if (state === "sent") setState("idle");
+          }}
+        />
+        <button type="submit" className="btn btn-primary btn-sm shrink-0" disabled={state === "sending" || !email}>
+          {state === "sending" ? <Spinner /> : <Mail className="size-3.5" />} ส่ง
+        </button>
+      </div>
+      <p className="hint mt-0">
+        {state === "sent" ? <span className="font-semibold text-fg">ส่งแล้ว — ตรวจกล่องจดหมาย (และโฟลเดอร์สแปม)</span> : "ระบบไม่เก็บอีเมลนี้"}
+      </p>
+      <ErrorNote message={error} />
+    </form>
   );
 }
 

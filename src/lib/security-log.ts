@@ -13,7 +13,11 @@ export type SecurityEventKind =
   | "superadmin_logout"
   | "superadmin_room_deleted"
   | "superadmin_admin_key_reset"
-  | "superadmin_cleanup";
+  | "superadmin_cleanup"
+  | "email_sent"
+  | "email_failed"
+  | "email_throttled"
+  | "email_copy_kept";
 
 export interface SecurityEvent {
   id: string;

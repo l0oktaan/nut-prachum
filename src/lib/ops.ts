@@ -2,6 +2,7 @@ import "server-only";
 import { statfs } from "node:fs/promises";
 import { query } from "./db";
 import { holidaysStatus } from "./holidays";
+import { mailEnabled, mailFrom } from "./mail";
 import { hashSecret, newSecret } from "./tokens";
 
 /* --------------------------------- status --------------------------------- */
@@ -61,6 +62,7 @@ export async function systemStatus() {
     },
     disk,
     holidays: holidaysStatus(),
+    mail: { enabled: mailEnabled(), from: mailFrom() },
   };
 }
 
