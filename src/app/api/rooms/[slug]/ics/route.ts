@@ -10,7 +10,8 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/rooms/[slug]
   const room = toRoomPublic(row);
   if (!room.finalDate || room.finalSlot === null) return fail(404, "ผู้จัดยังไม่ได้สรุปวันประชุม");
 
-  const roomUrl = new URL(`/r/${slug}`, req.nextUrl.origin).toString();
+  // Behind a proxy the request origin can be the container's own address, so prefer the configured one.
+  const roomUrl = new URL(`/r/${slug}`, process.env.APP_URL || req.nextUrl.origin).toString();
   const ics = buildIcs(
     room,
     { title: room.title, description: room.description, date: room.finalDate, slot: room.finalSlot },

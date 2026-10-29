@@ -9,9 +9,26 @@ services:
   app:
     # Traefik reaches the container directly; no host port needed.
     ports: !reset []
+    environment:
+      COOKIE_SECURE: "true"
+      APP_URL: https://setmeet.tontaan.tech
     labels:
       traefik.enable: "true"
       traefik.http.routers.setmeet.rule: Host(`setmeet.tontaan.tech`)
       traefik.http.routers.setmeet.entrypoints: websecure
       traefik.http.routers.setmeet.tls.certresolver: letsencrypt
+      traefik.http.routers.setmeet.middlewares: setmeet-ratelimit
+      traefik.http.routers.setmeet.service: setmeet
+      # Creating rooms gets a much tighter per-IP limit than browsing.
+      traefik.http.routers.setmeet-create.rule: Host(`setmeet.tontaan.tech`) && Path(`/api/rooms`) && Method(`POST`)
+      traefik.http.routers.setmeet-create.entrypoints: websecure
+      traefik.http.routers.setmeet-create.tls.certresolver: letsencrypt
+      traefik.http.routers.setmeet-create.middlewares: setmeet-create-ratelimit
+      traefik.http.routers.setmeet-create.service: setmeet
+      # Per client IP (Traefik sees it directly on the host network).
+      traefik.http.middlewares.setmeet-ratelimit.ratelimit.average: "30"
+      traefik.http.middlewares.setmeet-ratelimit.ratelimit.burst: "60"
+      traefik.http.middlewares.setmeet-create-ratelimit.ratelimit.average: "10"
+      traefik.http.middlewares.setmeet-create-ratelimit.ratelimit.period: 1m
+      traefik.http.middlewares.setmeet-create-ratelimit.ratelimit.burst: "10"
       traefik.http.services.setmeet.loadbalancer.server.port: "3000"

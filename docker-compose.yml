@@ -4,7 +4,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-nutprachum}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nutprachum}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-nutprachum}
       TZ: Asia/Bangkok
     volumes:
@@ -22,7 +22,7 @@ services:
     build: .
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-nutprachum}:${POSTGRES_PASSWORD:-nutprachum}@db:5432/${POSTGRES_DB:-nutprachum}
+      DATABASE_URL: postgres://${POSTGRES_USER:-nutprachum}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-nutprachum}
       # Set to "true" when served over HTTPS (behind a reverse proxy).
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       TZ: Asia/Bangkok

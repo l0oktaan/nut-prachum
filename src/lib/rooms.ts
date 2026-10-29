@@ -1,7 +1,7 @@
 import "server-only";
 import { isUniqueViolation, query, transaction } from "./db";
 import { getDates, getSlots, isOffered, type Level, type SlotConfig, type TimeMode } from "./slots";
-import { hashSecret, newSecret, newSlug, secretMatches } from "./tokens";
+import { hashSecret, isSlug, newSecret, newSlug, secretMatches } from "./tokens";
 import type {
   AdminSnapshot,
   Cell,
@@ -166,6 +166,7 @@ export async function createRoom(input: CreateRoomInput) {
 }
 
 export async function getRoom(slug: string): Promise<RoomRow | null> {
+  if (!isSlug(slug)) return null;
   const rows = await query<RoomRow>("SELECT * FROM rooms WHERE slug = $1", [slug]);
   return rows[0] ?? null;
 }
@@ -306,6 +307,14 @@ export async function claimParticipant(roomId: string, participantId: string) {
     [participantId, roomId],
   );
   return rows[0] ?? null;
+}
+
+/** Cap on people per room, so an open room can't be flooded with self-added names. */
+export const MAX_PARTICIPANTS = 300;
+
+export async function countParticipants(roomId: string): Promise<number> {
+  const rows = await query<{ n: number }>("SELECT count(*)::int AS n FROM participants WHERE room_id = $1", [roomId]);
+  return rows[0].n;
 }
 
 export type AddResult = { ok: true; participant: ParticipantRow } | { ok: false; reason: "duplicate" };

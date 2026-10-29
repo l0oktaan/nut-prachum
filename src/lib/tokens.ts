@@ -3,6 +3,9 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 const ALPHABET = "abcdefghijkmnopqrstuvwxyz23456789"; // no look-alike characters
 
+/** Whether `s` could be a room slug from `newSlug` — rejects junk before it reaches a query or cookie name. */
+export const isSlug = (s: string) => /^[a-km-z2-9]{8}$/.test(s);
+
 export function newSlug(length = 8): string {
   const bytes = randomBytes(length);
   let out = "";

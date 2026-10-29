@@ -1,8 +1,13 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { RoomView } from "@/components/RoomView";
 import { getSnapshot } from "@/lib/rooms";
 import { RoomSkeleton } from "./skeleton";
+
+export const metadata: Metadata = {
+  robots: { index: false },
+};
 
 export default function RoomPage({ params }: PageProps<"/r/[slug]">) {
   return (

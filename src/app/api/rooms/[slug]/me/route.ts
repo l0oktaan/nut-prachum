@@ -4,12 +4,15 @@ import { fail, json, nameSchema, parseBody } from "@/lib/api";
 import {
   addParticipant,
   claimParticipant,
+  countParticipants,
   findParticipantByToken,
   getRoom,
+  MAX_PARTICIPANTS,
   toMe,
   touchParticipant,
 } from "@/lib/rooms";
 import { clearSession, readSessionParticipant, setSession } from "@/lib/session";
+import { isSlug } from "@/lib/tokens";
 
 type Ctx = RouteContext<"/api/rooms/[slug]/me">;
 
@@ -52,6 +55,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   } else {
     if (room.is_locked) return fail(403, "ผู้จัดปิดรับคำตอบแล้ว");
     if (!room.allow_new_members) return fail(403, "ห้องนี้รับเฉพาะรายชื่อที่ผู้จัดกำหนดไว้");
+    if ((await countParticipants(room.id)) >= MAX_PARTICIPANTS) {
+      return fail(403, `ห้องนี้มีผู้เข้าร่วมครบ ${MAX_PARTICIPANTS} คนแล้ว กรุณาติดต่อผู้จัด`);
+    }
     const added = await addParticipant(room.id, input.name, { invited: false, claim: true });
     if (!added.ok) return fail(409, "มีชื่อนี้อยู่ในห้องแล้ว กรุณาเลือกจากรายชื่อ หรือใช้ชื่ออื่น");
     participant = added.participant;
@@ -64,6 +70,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
 export async function DELETE(_req: NextRequest, ctx: Ctx) {
   const { slug } = await ctx.params;
+  if (!isSlug(slug)) return fail(404, "ไม่พบห้องนัดประชุมนี้");
   await clearSession(slug);
   return json({ me: null });
 }
