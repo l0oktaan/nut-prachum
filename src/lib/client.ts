@@ -1,5 +1,5 @@
 // Browser-side helpers: JSON fetch wrapper and the "rooms I created" list kept in localStorage.
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import type { Period, TimeMode } from "./slots";
 
 const noopSubscribe = () => () => {};
@@ -78,22 +78,47 @@ export function parseSavedRooms(raw: string): SavedRoom[] {
 
 export const loadSavedRooms = () => parseSavedRooms(readSavedRoomsRaw());
 
-export function saveRoom(room: Omit<SavedRoom, "savedAt">) {
+const savedRoomListeners = new Set<() => void>();
+const notifySavedRooms = () => savedRoomListeners.forEach((l) => l());
+
+function subscribeSavedRooms(onChange: () => void) {
+  savedRoomListeners.add(onChange);
+  // Another tab saving or deleting a room.
+  const onStorage = (e: StorageEvent) => e.key === STORAGE_KEY && onChange();
+  window.addEventListener("storage", onStorage);
+  return () => {
+    savedRoomListeners.delete(onChange);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+/** "Rooms I created" — re-renders whenever the list changes, in this tab or another. */
+export function useSavedRooms(): SavedRoom[] {
+  const raw = useSyncExternalStore(subscribeSavedRooms, readSavedRoomsRaw, () => "[]");
+  return useMemo(() => parseSavedRooms(raw), [raw]);
+}
+
+function writeSavedRooms(rooms: SavedRoom[]) {
   try {
-    const rest = loadSavedRooms().filter((r) => r.slug !== room.slug);
-    const next = [{ ...room, savedAt: new Date().toISOString() }, ...rest].slice(0, 30);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(rooms));
   } catch {
     /* storage unavailable — ignore */
   }
+  notifySavedRooms();
+}
+
+export function saveRoom(room: Omit<SavedRoom, "savedAt">) {
+  const rest = loadSavedRooms().filter((r) => r.slug !== room.slug);
+  writeSavedRooms([{ ...room, savedAt: new Date().toISOString() }, ...rest].slice(0, 30));
 }
 
 export function forgetRoom(slug: string) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(loadSavedRooms().filter((r) => r.slug !== slug)));
-  } catch {
-    /* ignore */
-  }
+  forgetRooms([slug]);
+}
+
+export function forgetRooms(slugs: string[]) {
+  if (!slugs.length) return;
+  writeSavedRooms(loadSavedRooms().filter((r) => !slugs.includes(r.slug)));
 }
 
 /** A new room prefilled from an earlier one ("สร้างนัดซ้ำ"): same topic, members and time settings, new dates. */

@@ -1,11 +1,11 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarCheck2, CalendarDays, House, Menu, Monitor, Moon, Plus, Sun, X } from "lucide-react";
 import { cx } from "./ui";
-import { parseSavedRooms, readSavedRoomsRaw, useClientValue } from "@/lib/client";
+import { forgetRooms, useSavedRooms, type SavedRoom } from "@/lib/client";
 import { setThemePref, useThemePref, type ThemePref } from "@/lib/theme";
 
 export function Sidebar() {
@@ -78,8 +78,8 @@ function Logo() {
 
 function SidebarNav({ onNavigate }: { onNavigate: () => void }) {
   const pathname = usePathname();
-  const raw = useClientValue(readSavedRoomsRaw, "[]");
-  const rooms = useMemo(() => parseSavedRooms(raw), [raw]);
+  const rooms = useSavedRooms();
+  usePruneSavedRooms(rooms);
 
   return (
     <>
@@ -155,6 +155,29 @@ function ThemeToggle() {
       ))}
     </div>
   );
+}
+
+/**
+ * Once per page load, drops saved rooms that no longer work — deleted (here, on another device, or
+ * by cleanup) or with a reset admin key. Checked with each room's own admin key, so the endpoint
+ * can't be used to probe which room codes exist.
+ */
+function usePruneSavedRooms(rooms: SavedRoom[]) {
+  const checked = useRef(false);
+  useEffect(() => {
+    if (checked.current || !rooms.length) return;
+    checked.current = true;
+    fetch("/api/rooms/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rooms: rooms.map(({ slug, adminKey }) => ({ slug, adminKey })) }),
+    })
+      .then((r) => (r.ok ? (r.json() as Promise<{ valid: string[] }>) : null))
+      .then((d) => d && forgetRooms(rooms.filter((r) => !d.valid.includes(r.slug)).map((r) => r.slug)))
+      .catch(() => {
+        /* offline or server busy: keep the list as is */
+      });
+  }, [rooms]);
 }
 
 function NavLink({
