@@ -87,7 +87,7 @@ function SidebarNav({ onNavigate }: { onNavigate: () => void }) {
         <NavLink href="/" active={pathname === "/"} icon={<House className="size-[18px]" />} onClick={onNavigate}>
           หน้าแรก
         </NavLink>
-        <NavLink href="/#create" active={false} icon={<Plus className="size-[18px]" />} onClick={onNavigate}>
+        <NavLink href="/new" active={pathname === "/new"} icon={<Plus className="size-[18px]" />} onClick={onNavigate}>
           สร้างห้องนัด
         </NavLink>
       </nav>
@@ -223,7 +223,7 @@ function UpgradeCard({ onClick }: { onClick: () => void }) {
         ครั้งใหม่?
       </p>
       <p className="relative mt-1 text-xs text-ink/70">สร้างห้องได้ในไม่ถึงนาที</p>
-      <Link href="/#create" onClick={onClick} className="btn btn-primary btn-sm relative mt-4 w-full py-2.5">
+      <Link href="/new" onClick={onClick} className="btn btn-primary btn-sm relative mt-4 w-full py-2.5">
         สร้างห้องเลย
       </Link>
     </div>

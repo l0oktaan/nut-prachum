@@ -73,6 +73,13 @@ CREATE TABLE IF NOT EXISTS security_events (
 );
 CREATE INDEX IF NOT EXISTS security_events_at_idx ON security_events (at DESC);
 
+-- Site-wide options set on the super admin page (retention period, privacy page on/off, …).
+CREATE TABLE IF NOT EXISTS app_settings (
+  key         text PRIMARY KEY,
+  value       jsonb NOT NULL,
+  updated_at  timestamptz NOT NULL DEFAULT now()
+);
+
 -- A member's note to the organizer, e.g. "busy until 15:00 on the 3rd".
 ALTER TABLE participants ADD COLUMN IF NOT EXISTS note text NOT NULL DEFAULT '';
 `;

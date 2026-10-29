@@ -7,4 +7,6 @@ export async function register() {
   }
   const { migrate } = await import("./lib/migrate");
   await migrate();
+  const { scheduleAutoCleanup } = await import("./lib/auto-cleanup");
+  scheduleAutoCleanup();
 }

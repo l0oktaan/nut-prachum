@@ -11,15 +11,16 @@ import {
   LogOut,
   RefreshCw,
   Search,
+  Settings2,
   ShieldAlert,
   ShieldCheck,
   Sparkles,
   Trash2,
 } from "lucide-react";
-import { CopyField, cx, ErrorNote, Segmented, Spinner } from "./ui";
+import { CopyField, cx, ErrorNote, Segmented, Spinner, Switch } from "./ui";
 import { formatDateShortYear, formatRange, TH_LOCALE } from "@/lib/slots";
 
-type Tab = "status" | "rooms" | "cleanup" | "security";
+type Tab = "status" | "rooms" | "cleanup" | "security" | "site";
 
 class Unauthorized extends Error {}
 
@@ -113,6 +114,7 @@ export function SuperAdminView() {
                 { value: "rooms", label: <><Database className="size-4" /> ห้องทั้งหมด</> },
                 { value: "cleanup", label: <><Sparkles className="size-4" /> ล้างข้อมูลขยะ</> },
                 { value: "security", label: <><ShieldCheck className="size-4" /> ความปลอดภัย</> },
+                { value: "site", label: <><Settings2 className="size-4" /> ตั้งค่าเว็บ</> },
               ]}
             />
           </div>
@@ -120,6 +122,7 @@ export function SuperAdminView() {
           {tab === "rooms" && <RoomsTab onError={onError} />}
           {tab === "cleanup" && <CleanupTab onError={onError} />}
           {tab === "security" && <SecurityTab onError={onError} />}
+          {tab === "site" && <SiteTab onError={onError} />}
         </>
       )}
     </div>
@@ -599,6 +602,82 @@ function CleanupCard({
   );
 }
 
+/* ---------------------------------- site ---------------------------------- */
+
+interface SiteSettings {
+  retentionDays: number | null;
+  privacyPublished: boolean;
+  lastCleanup: { at: string; deleted: number } | null;
+  retentionOptions: number[];
+}
+
+function SiteTab({ onError }: { onError: (e: unknown) => void }) {
+  const { data, error } = useLoad<SiteSettings>("/api/superadmin/settings", onError);
+  const [saved, setSaved] = useState<SiteSettings | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const s = saved ?? data;
+
+  const save = async (patch: Partial<Pick<SiteSettings, "retentionDays" | "privacyPublished">>, ask?: string) => {
+    if (ask && !confirm(ask)) return;
+    setBusy(true);
+    setSaveError(null);
+    try {
+      setSaved(await sa<SiteSettings>("/api/superadmin/settings", { method: "PUT", body: JSON.stringify(patch) }));
+    } catch (e) {
+      onError(e);
+      setSaveError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!s) return error ? <ErrorNote message={error} /> : <Spinner />;
+  return (
+    <div className="grid gap-5 lg:grid-cols-2">
+      <section className="card flex flex-col gap-4 p-5">
+        <h2 className="font-semibold">หน้านโยบายความเป็นส่วนตัว</h2>
+        <Switch
+          checked={s.privacyPublished}
+          disabled={busy}
+          onChange={(v) => save({ privacyPublished: v }, v ? "เปิดให้ทุกคนเห็นหน้านโยบายความเป็นส่วนตัว และแสดงลิงก์ท้ายเว็บ?" : undefined)}
+          label="แสดงหน้า /privacy และลิงก์ท้ายเว็บ"
+          description="เนื้อหาเป็นร่างที่เขียนตามการทำงานจริงของระบบ — ควรตรวจทานก่อนเปิด"
+        />
+        <a href="/privacy" target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm self-start">
+          ดูหน้านโยบาย {s.privacyPublished ? "" : "(ตอนนี้ปิดอยู่ จะเห็นเป็น 404)"}
+        </a>
+      </section>
+
+      <section className="card flex flex-col gap-4 p-5">
+        <div>
+          <h2 className="font-semibold">ลบห้องอัตโนมัติ</h2>
+          <p className="mt-1 text-sm text-stone-500">
+            ลบห้องเมื่อวันสุดท้ายที่ถามสมาชิกผ่านไปตามจำนวนวันที่เลือก (ตรวจทุก 6 ชั่วโมง) — หน้าแรกและหน้านโยบายจะบอกผู้ใช้ตามค่านี้
+          </p>
+        </div>
+        <Segmented
+          className="self-start"
+          value={s.retentionDays ?? 0}
+          onChange={(d) =>
+            save(
+              { retentionDays: d || null },
+              d ? `ลบห้องที่เลยวันสุดท้ายเกิน ${d} วันอัตโนมัติ (รวมห้องที่เข้าเงื่อนไขตอนนี้ทันที)?` : undefined,
+            )
+          }
+          options={[{ value: 0, label: "ปิด" }, ...s.retentionOptions.map((d) => ({ value: d, label: `${d} วัน` }))]}
+        />
+        <p className="text-xs text-stone-500">
+          {s.lastCleanup
+            ? `ทำงานล่าสุด ${when(s.lastCleanup.at)} · ลบ ${n(s.lastCleanup.deleted)} ห้อง`
+            : "ยังไม่เคยทำงาน"}
+        </p>
+      </section>
+      <ErrorNote message={saveError} />
+    </div>
+  );
+}
+
 /* -------------------------------- security -------------------------------- */
 
 interface SecurityEvent {
@@ -651,6 +730,8 @@ const EVENT_LABEL: Record<string, { label: string; bad?: boolean }> = {
   email_failed: { label: "ส่งอีเมลไม่สำเร็จ", bad: true },
   email_throttled: { label: "ส่งอีเมลถี่เกินไป (ถูกจำกัด)", bad: true },
   email_copy_kept: { label: "ลบสำเนาใน Sent ไม่ได้", bad: true },
+  superadmin_settings: { label: "เปลี่ยนตั้งค่าเว็บ" },
+  auto_cleanup: { label: "ลบห้องอัตโนมัติ" },
 };
 
 function SecurityTab({ onError }: { onError: (e: unknown) => void }) {

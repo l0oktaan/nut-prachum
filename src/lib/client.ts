@@ -138,7 +138,7 @@ export interface RoomDraft {
   members: string[];
 }
 
-// Kept per tab and only picked up by /?repeat={slug}, so a plain visit to the home page stays blank.
+// Kept per tab and only picked up by /new?repeat={slug}, so a plain visit to the form stays blank.
 const draftKey = (slug: string) => `nut-prachum:repeat:${slug}`;
 
 export function saveDraft(draft: RoomDraft) {

@@ -167,7 +167,7 @@ export function AdminView({ slug }: { slug: string }) {
       allowNewMembers: room.allowNewMembers,
       members: participants.map((p) => (p.required ? `*${p.name}` : p.name)),
     });
-    router.push(`/?repeat=${slug}#create`);
+    router.push(`/new?repeat=${slug}`);
   };
   const reminderText =
     `⏰ ยังรอคำตอบจาก: ${pending.map((p) => p.name).join(", ")}\n` +

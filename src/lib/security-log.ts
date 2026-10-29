@@ -17,7 +17,9 @@ export type SecurityEventKind =
   | "email_sent"
   | "email_failed"
   | "email_throttled"
-  | "email_copy_kept";
+  | "email_copy_kept"
+  | "superadmin_settings"
+  | "auto_cleanup";
 
 export interface SecurityEvent {
   id: string;
@@ -48,6 +50,15 @@ export async function logSecurityEvent(
       extra.slug ?? null,
       (extra.detail ?? "").slice(0, 500),
     ]);
+  } catch (err) {
+    console.warn("[security-log]", (err as Error).message);
+  }
+}
+
+/** Records something the server did on its own (no request, so no IP). */
+export async function logSystemEvent(kind: SecurityEventKind, extra: { detail?: string } = {}) {
+  try {
+    await query("INSERT INTO security_events (kind, detail) VALUES ($1, $2)", [kind, (extra.detail ?? "").slice(0, 500)]);
   } catch (err) {
     console.warn("[security-log]", (err as Error).message);
   }

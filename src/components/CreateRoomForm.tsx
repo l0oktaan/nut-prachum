@@ -22,7 +22,7 @@ import {
 
 const HOURS = Array.from({ length: 18 }, (_, i) => (i + 6) * 60); // 06:00 – 23:00
 
-/** The create form — prefilled from an earlier room when opened as /?repeat={slug}. */
+/** The create form — prefilled from an earlier room when opened as /new?repeat={slug}. */
 export function CreateRoomForm() {
   // Server render and hydration use a blank form; the draft (if any) then remounts it prefilled.
   const router = useRouter();
@@ -32,7 +32,7 @@ export function CreateRoomForm() {
   const dismiss = () => {
     if (draft) clearDraft(draft.fromSlug);
     setDismissed(true);
-    router.replace("/", { scroll: false });
+    router.replace("/new", { scroll: false });
   };
   return <RoomForm key={draft ? raw : "blank"} draft={draft} onDismiss={dismiss} />;
 }
