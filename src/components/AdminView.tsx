@@ -9,6 +9,7 @@ import {
   CalendarHeart,
   CheckCircle2,
   Clock3,
+  CopyPlus,
   ExternalLink,
   Eye,
   Link as LinkIcon,
@@ -28,7 +29,16 @@ import { ResultsPanel } from "./ResultsPanel";
 import { FinalBanner } from "./FinalBanner";
 import { RoomHeader } from "./RoomHeader";
 import { Avatar, CopyButton, CopyField, cx, ErrorNote, Segmented, Spinner, Switch } from "./ui";
-import { api, forgetRoom, loadSavedRooms, readHashParam, saveRoom, timeAgo, useClientValue } from "@/lib/client";
+import {
+  api,
+  forgetRoom,
+  loadSavedRooms,
+  readHashParam,
+  saveDraft,
+  saveRoom,
+  timeAgo,
+  useClientValue,
+} from "@/lib/client";
 import { candidates, rank, tally } from "@/lib/results";
 import { announcementText } from "@/lib/calendar";
 import {
@@ -65,6 +75,7 @@ export function AdminView({ slug }: { slug: string }) {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("members");
   const [busy, setBusy] = useState(false);
+  const router = useRouter();
 
   const load = useCallback(() => {
     if (!adminKey) return Promise.resolve();
@@ -135,6 +146,23 @@ export function AdminView({ slug }: { slug: string }) {
   const pending = participants.filter((p) => !p.respondedAt);
   const best = rank(candidates(room, tally(room, data.cells)), 1)[0];
   const inviteText = `📅 ช่วยเลือกวันเวลาที่สะดวกสำหรับ “${room.title}” หน่อยครับ/ค่ะ\n${memberUrl}`;
+  // Same topic, members and time settings in a new room; the organizer only picks new dates and slots.
+  const repeatMeeting = () => {
+    saveDraft({
+      fromSlug: slug,
+      title: room.title,
+      description: room.description,
+      organizerName: room.organizerName,
+      timeMode: room.timeMode,
+      dayStartMin: room.dayStartMin,
+      dayEndMin: room.dayEndMin,
+      slotMinutes: room.slotMinutes,
+      durationDays: room.durationDays,
+      allowNewMembers: room.allowNewMembers,
+      members: participants.map((p) => p.name),
+    });
+    router.push(`/?repeat=${slug}#create`);
+  };
   const reminderText =
     `⏰ ยังรอคำตอบจาก: ${pending.map((p) => p.name).join(", ")}\n` +
     `เลือกวันเวลาที่สะดวกสำหรับ “${room.title}” ได้ที่ ${memberUrl}`;
@@ -170,6 +198,14 @@ export function AdminView({ slug }: { slug: string }) {
             <Link href={`/r/${slug}`} target="_blank" className="btn btn-secondary">
               <ExternalLink className="size-4" /> หน้าสมาชิก
             </Link>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={repeatMeeting}
+              title="ห้องใหม่ หัวข้อและสมาชิกเดิม เลือกแค่วันและเวลาใหม่"
+            >
+              <CopyPlus className="size-4" /> สร้างนัดซ้ำ
+            </button>
           </>
         }
       />

@@ -1,31 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarHeart, Clock, Clock3, Coffee, PenLine, Sparkles, Sun, Users } from "lucide-react";
+import { CalendarHeart, Clock, Clock3, Coffee, CopyPlus, PenLine, Sparkles, Sun, Users, X } from "lucide-react";
 import { DateSlotsField } from "./DateSlotsField";
 import { DurationField } from "./DurationField";
 import { MultiDatePicker } from "./MultiDatePicker";
 import { cx, ErrorNote, Segmented, Spinner, Switch } from "./ui";
-import { api, saveRoom } from "@/lib/client";
+import { api, clearDraft, parseDraft, readDraftRaw, saveRoom, useClientValue, type RoomDraft } from "@/lib/client";
 import { cleanDateSlots, fmtMin, getSlots, slotsForDate, type SlotConfig, type TimeMode } from "@/lib/slots";
 
 const HOURS = Array.from({ length: 18 }, (_, i) => (i + 6) * 60); // 06:00 – 23:00
 
+/** The create form — prefilled from an earlier room when opened as /?repeat={slug}. */
 export function CreateRoomForm() {
+  // Server render and hydration use a blank form; the draft (if any) then remounts it prefilled.
   const router = useRouter();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [organizerName, setOrganizerName] = useState("");
+  const raw = useClientValue(readDraftRaw, null);
+  const [dismissed, setDismissed] = useState(false);
+  const draft = useMemo(() => (dismissed ? null : parseDraft(raw)), [raw, dismissed]);
+  const dismiss = () => {
+    if (draft) clearDraft(draft.fromSlug);
+    setDismissed(true);
+    router.replace("/", { scroll: false });
+  };
+  return <RoomForm key={draft ? raw : "blank"} draft={draft} onDismiss={dismiss} />;
+}
+
+function RoomForm({ draft, onDismiss }: { draft: RoomDraft | null; onDismiss: () => void }) {
+  const router = useRouter();
+  const [title, setTitle] = useState(draft?.title ?? "");
+  const [description, setDescription] = useState(draft?.description ?? "");
+  const [organizerName, setOrganizerName] = useState(draft?.organizerName ?? "");
   const [dates, setDates] = useState<string[]>([]);
-  const [timeMode, setTimeMode] = useState<TimeMode>("period");
-  const [dayStartMin, setDayStartMin] = useState(540);
-  const [dayEndMin, setDayEndMin] = useState(1020);
-  const [slotMinutes, setSlotMinutes] = useState<30 | 60>(60);
-  const [durationDays, setDurationDays] = useState(1);
+  const [timeMode, setTimeMode] = useState<TimeMode>(draft?.timeMode ?? "period");
+  const [dayStartMin, setDayStartMin] = useState(draft?.dayStartMin ?? 540);
+  const [dayEndMin, setDayEndMin] = useState(draft?.dayEndMin ?? 1020);
+  const [slotMinutes, setSlotMinutes] = useState<30 | 60>(draft?.slotMinutes === 30 ? 30 : 60);
+  const [durationDays, setDurationDays] = useState(draft?.durationDays ?? 1);
   const [dateSlots, setDateSlots] = useState<Record<string, number[]>>({});
-  const [members, setMembers] = useState("");
-  const [allowNewMembers, setAllowNewMembers] = useState(true);
+  const [members, setMembers] = useState(draft?.members.join("\n") ?? "");
+  const [allowNewMembers, setAllowNewMembers] = useState(draft?.allowNewMembers ?? true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,6 +88,7 @@ export function CreateRoomForm() {
         }),
       });
       saveRoom({ slug: res.slug, title, adminKey: res.adminKey });
+      if (draft) clearDraft(draft.fromSlug);
       router.push(`/r/${res.slug}/admin#key=${res.adminKey}&new=1`);
     } catch (err) {
       setError((err as Error).message);
@@ -82,6 +98,27 @@ export function CreateRoomForm() {
 
   return (
     <form onSubmit={submit} className="card flex flex-col gap-8 p-5 sm:p-8">
+      {draft && (
+        <div className="card-neon flex items-start gap-3 p-4">
+          <CopyPlus className="mt-0.5 size-5 shrink-0" />
+          <div className="min-w-0 flex-1 text-sm">
+            <p className="font-extrabold">สร้างนัดซ้ำจาก “{draft.title}”</p>
+            <p className="text-ink/70">
+              ใช้หัวข้อ รายชื่อสมาชิก {draft.members.length} คน และรูปแบบเวลาเดิมให้แล้ว — เลือกวันและเวลาใหม่ได้เลย
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="grid size-8 shrink-0 place-items-center rounded-full transition hover:bg-black/10"
+            aria-label="ล้างฟอร์ม เริ่มสร้างห้องใหม่"
+            title="ล้างฟอร์ม เริ่มสร้างห้องใหม่"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      )}
+
       <Section icon={<PenLine className="size-4" />} tone="bg-neon text-ink" title="รายละเอียดการประชุม">
         <div>
           <label className="label" htmlFor="title">หัวข้อการประชุม *</label>

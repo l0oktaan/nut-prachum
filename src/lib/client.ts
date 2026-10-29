@@ -1,5 +1,6 @@
 // Browser-side helpers: JSON fetch wrapper and the "rooms I created" list kept in localStorage.
 import { useSyncExternalStore } from "react";
+import type { TimeMode } from "./slots";
 
 const noopSubscribe = () => () => {};
 
@@ -69,6 +70,58 @@ export function saveRoom(room: Omit<SavedRoom, "savedAt">) {
 export function forgetRoom(slug: string) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(loadSavedRooms().filter((r) => r.slug !== slug)));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** A new room prefilled from an earlier one ("สร้างนัดซ้ำ"): same topic, members and time settings, new dates. */
+export interface RoomDraft {
+  fromSlug: string;
+  title: string;
+  description: string;
+  organizerName: string;
+  timeMode: TimeMode;
+  dayStartMin: number;
+  dayEndMin: number;
+  slotMinutes: number;
+  durationDays: number;
+  allowNewMembers: boolean;
+  members: string[];
+}
+
+// Kept per tab and only picked up by /?repeat={slug}, so a plain visit to the home page stays blank.
+const draftKey = (slug: string) => `nut-prachum:repeat:${slug}`;
+
+export function saveDraft(draft: RoomDraft) {
+  try {
+    sessionStorage.setItem(draftKey(draft.fromSlug), JSON.stringify(draft));
+  } catch {
+    /* storage unavailable — ignore */
+  }
+}
+
+/** The raw draft named by ?repeat= in the URL, or null. */
+export function readDraftRaw(): string | null {
+  const slug = new URLSearchParams(window.location.search).get("repeat");
+  try {
+    return slug ? sessionStorage.getItem(draftKey(slug)) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function parseDraft(raw: string | null): RoomDraft | null {
+  try {
+    return raw ? (JSON.parse(raw) as RoomDraft) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearDraft(slug: string) {
+  try {
+    sessionStorage.removeItem(draftKey(slug));
   } catch {
     /* ignore */
   }
