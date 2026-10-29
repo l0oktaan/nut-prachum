@@ -214,6 +214,15 @@ src/
     migrate.ts                schema
 ```
 
+## Deploy บนเซิร์ฟเวอร์ (setmeet.tontaan.tech)
+
+`docker compose up -d --build` — `.env` ตั้ง `COMPOSE_FILE` ให้รวม [docker-compose.prod.yml](docker-compose.prod.yml) อยู่แล้ว
+(Traefik labels, rate limit, super admin, ปิดพอร์ต host)
+
+- healthcheck ตรวจทุก 2 วินาทีช่วงเริ่มต้น (`start_interval`) เพราะ Traefik ส่ง traffic ให้เฉพาะคอนเทนเนอร์ที่ healthy — แอปพร้อมใน ~3 วินาที
+- ระหว่างนั้น service `updating` (nginx เล็ก ๆ, [deploy/updating](deploy/updating)) ตอบ **503 "นัดประชุมกำลังอัปเดตระบบ"** และโหลดหน้าใหม่เอง
+  แทนที่ request จะตกไปที่ catch-all ของโดเมน (priority 1) ซึ่งแสดงหน้า 404 ของเว็บอื่น
+
 ## ข้อควรทำเมื่อใช้งานจริง
 
 - วางหลัง reverse proxy ที่มี HTTPS (Caddy / Nginx / Traefik) แล้วตั้ง `COOKIE_SECURE=true`

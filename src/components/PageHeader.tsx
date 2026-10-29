@@ -3,8 +3,9 @@
 import type { ReactNode } from "react";
 import { CalendarDays } from "lucide-react";
 import { useClientValue } from "@/lib/client";
+import { TH_LOCALE } from "@/lib/slots";
 
-const fmtToday = new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "long", year: "numeric" });
+const fmtToday = new Intl.DateTimeFormat(TH_LOCALE, { day: "numeric", month: "long", year: "numeric" });
 
 /** Today in Thai, e.g. "29 ตุลาคม 2569" (Buddhist year). Empty during SSR. */
 function TodayPill() {

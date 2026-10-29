@@ -17,6 +17,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { CopyField, cx, ErrorNote, Segmented, Spinner } from "./ui";
+import { formatDateShortYear, formatRange, TH_LOCALE } from "@/lib/slots";
 
 type Tab = "status" | "rooms" | "cleanup" | "security";
 
@@ -35,7 +36,7 @@ async function sa<T>(url: string, init: RequestInit = {}): Promise<T> {
   return data as T;
 }
 
-const fmtTime = new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeStyle: "short" });
+const fmtTime = new Intl.DateTimeFormat(TH_LOCALE, { dateStyle: "medium", timeStyle: "short" });
 const when = (iso: string) => fmtTime.format(new Date(iso));
 const n = (x: number) => x.toLocaleString("th-TH");
 
@@ -444,7 +445,7 @@ function RoomsTab({ onError }: { onError: (e: unknown) => void }) {
                   <td className="px-4 py-3">
                     <p className="font-mono font-semibold">{r.slug}</p>
                     <p className="text-xs text-stone-500">
-                      วันที่ {r.startDate} → {r.endDate}
+                      วันที่ {formatRange(r.startDate, r.endDate)}
                     </p>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-stone-600">{when(r.createdAt)}</td>
@@ -454,7 +455,7 @@ function RoomsTab({ onError }: { onError: (e: unknown) => void }) {
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     {r.finalDate ? (
-                      <span className="chip bg-neon text-ink">สรุป {r.finalDate}</span>
+                      <span className="chip bg-neon text-ink">สรุป {formatDateShortYear(r.finalDate)}</span>
                     ) : r.isLocked ? (
                       <span className="chip bg-ink text-white">ปิดรับ</span>
                     ) : (
@@ -571,7 +572,7 @@ function CleanupCard({
                 <li key={r.slug} className="flex justify-between gap-3 rounded-xl bg-canvas px-3 py-1.5">
                   <span className="font-mono">{r.slug}</span>
                   <span className="shrink-0 text-stone-500">
-                    {r.startDate} → {r.endDate} · ตอบ {r.responded}/{r.participants}
+                    {formatRange(r.startDate, r.endDate)} · ตอบ {r.responded}/{r.participants}
                   </span>
                 </li>
               ))}

@@ -166,26 +166,28 @@ export function parseCellKey(key: string): { date: string; slot: number } {
   return { date, slot: Number(slot) };
 }
 
-const fmtWeekday = new Intl.DateTimeFormat("th-TH", { weekday: "short", timeZone: "UTC" });
-const fmtMonth = new Intl.DateTimeFormat("th-TH", { month: "short", timeZone: "UTC" });
-const fmtLong = new Intl.DateTimeFormat("th-TH", {
+/** Thai with the Buddhist calendar spelled out, so every year is พ.ศ. whatever the browser's defaults. */
+export const TH_LOCALE = "th-TH-u-ca-buddhist";
+
+const fmtWeekday = new Intl.DateTimeFormat(TH_LOCALE, { weekday: "short", timeZone: "UTC" });
+const fmtMonth = new Intl.DateTimeFormat(TH_LOCALE, { month: "short", timeZone: "UTC" });
+const fmtLong = new Intl.DateTimeFormat(TH_LOCALE, {
   weekday: "long",
   day: "numeric",
   month: "long",
   year: "numeric",
   timeZone: "UTC",
 });
-// th-TH uses the Buddhist calendar, so every year below renders as พ.ศ. (e.g. 2569).
-const fmtMedium = new Intl.DateTimeFormat("th-TH", {
+const fmtMedium = new Intl.DateTimeFormat(TH_LOCALE, {
   weekday: "short",
   day: "numeric",
   month: "short",
   year: "numeric",
   timeZone: "UTC",
 });
-const fmtMonthYear = new Intl.DateTimeFormat("th-TH", { month: "long", year: "numeric", timeZone: "UTC" });
-const fmtShort = new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "short", timeZone: "UTC" });
-const fmtShortYear = new Intl.DateTimeFormat("th-TH", {
+const fmtMonthYear = new Intl.DateTimeFormat(TH_LOCALE, { month: "long", year: "numeric", timeZone: "UTC" });
+const fmtShort = new Intl.DateTimeFormat(TH_LOCALE, { day: "numeric", month: "short", timeZone: "UTC" });
+const fmtShortYear = new Intl.DateTimeFormat(TH_LOCALE, {
   day: "numeric",
   month: "short",
   year: "numeric",

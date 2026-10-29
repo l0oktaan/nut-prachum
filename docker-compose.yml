@@ -28,6 +28,14 @@ services:
       TZ: Asia/Bangkok
     ports:
       - "${APP_PORT:-3000}:3000"
+    # Traefik only routes to a healthy container, so check every 2s while starting
+    # (the Dockerfile's 30s interval would leave the site down for ~30s on each deploy).
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      start_interval: 2s
     depends_on:
       db:
         condition: service_healthy

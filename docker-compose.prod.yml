@@ -47,3 +47,24 @@ services:
       traefik.http.middlewares.setmeet-create-ratelimit.ratelimit.period: 1m
       traefik.http.middlewares.setmeet-create-ratelimit.ratelimit.burst: "10"
       traefik.http.services.setmeet.loadbalancer.server.port: "3000"
+
+  # "Updating" page while the app restarts (deploys). Its router has priority 2: above the domain-wide
+  # catch-all (priority 1, which shows another site's 404), below the app's own routers.
+  updating:
+    image: nginxinc/nginx-unprivileged:1.29-alpine
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    volumes:
+      - ./deploy/updating/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/updating/html:/usr/share/nginx/html:ro
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.setmeet-updating.rule: Host(`setmeet.tontaan.tech`)
+      traefik.http.routers.setmeet-updating.priority: "2"
+      traefik.http.routers.setmeet-updating.entrypoints: websecure
+      traefik.http.routers.setmeet-updating.tls.certresolver: letsencrypt
+      traefik.http.services.setmeet-updating.loadbalancer.server.port: "8080"
+    mem_limit: 32m
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
