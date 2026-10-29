@@ -1,6 +1,6 @@
 // Browser-side helpers: JSON fetch wrapper and the "rooms I created" list kept in localStorage.
 import { useSyncExternalStore } from "react";
-import type { TimeMode } from "./slots";
+import type { Period, TimeMode } from "./slots";
 
 const noopSubscribe = () => () => {};
 
@@ -107,6 +107,7 @@ export interface RoomDraft {
   dayEndMin: number;
   slotMinutes: number;
   durationDays: number;
+  periods: Period[];
   allowNewMembers: boolean;
   /** One name per line, as typed in the form ("*" marks a key member). */
   members: string[];

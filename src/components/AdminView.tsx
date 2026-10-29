@@ -161,6 +161,7 @@ export function AdminView({ slug }: { slug: string }) {
       dayEndMin: room.dayEndMin,
       slotMinutes: room.slotMinutes,
       durationDays: room.durationDays,
+      periods: room.periods,
       allowNewMembers: room.allowNewMembers,
       members: participants.map((p) => (p.required ? `*${p.name}` : p.name)),
     });

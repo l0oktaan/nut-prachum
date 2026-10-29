@@ -17,6 +17,14 @@ export interface SlotConfig {
   durationDays: number;
   /** Per-date slot keys, e.g. day 1 morning only. A date not listed offers every slot. */
   dateSlots: Record<string, number[]>;
+  /** The room's own periods for period mode (slot key = index); empty = DEFAULT_PERIODS. */
+  periods: Period[];
+}
+
+export interface Period {
+  label: string;
+  start: number; // minutes from midnight
+  end: number;
 }
 
 export interface Slot {
@@ -30,10 +38,12 @@ export interface Slot {
 export const MAX_DAYS = 62;
 export const MAX_DURATION_DAYS = 14;
 
-export const PERIODS: Slot[] = [
-  { key: 0, label: "เช้า", sub: "09:00–12:00", start: 540, end: 720 },
-  { key: 1, label: "บ่าย", sub: "13:00–16:00", start: 780, end: 960 },
-  { key: 2, label: "เย็น", sub: "17:00–20:00", start: 1020, end: 1200 },
+export const MAX_PERIODS = 6;
+
+export const DEFAULT_PERIODS: Period[] = [
+  { label: "เช้า", start: 540, end: 720 },
+  { label: "บ่าย", start: 780, end: 960 },
+  { label: "เย็น", start: 1020, end: 1200 },
 ];
 
 export const TIME_MODE_LABEL: Record<TimeMode, string> = {
@@ -50,7 +60,15 @@ export function fmtMin(m: number): string {
 
 export function getSlots(c: SlotConfig): Slot[] {
   if (c.timeMode === "day") return [{ key: 0, label: "ทั้งวัน", start: 0, end: 1440 }];
-  if (c.timeMode === "period") return PERIODS;
+  if (c.timeMode === "period") {
+    return (c.periods.length ? c.periods : DEFAULT_PERIODS).map((p, i) => ({
+      key: i,
+      label: p.label,
+      sub: `${fmtMin(p.start)}–${fmtMin(p.end)}`,
+      start: p.start,
+      end: p.end,
+    }));
+  }
   const slots: Slot[] = [];
   for (let m = c.dayStartMin; m + c.slotMinutes <= c.dayEndMin; m += c.slotMinutes) {
     slots.push({ key: m, label: fmtMin(m), start: m, end: m + c.slotMinutes });
@@ -206,7 +224,7 @@ export function slotLabel(c: SlotConfig, key: number): string {
   const s = findSlot(c, key);
   if (!s) return "";
   if (c.timeMode === "day") return "ทั้งวัน";
-  if (c.timeMode === "period") return `ช่วง${s.label} (${s.sub})`;
+  if (c.timeMode === "period") return `${s.label.startsWith("ช่วง") ? s.label : `ช่วง${s.label}`} (${s.sub})`;
   return `${fmtMin(s.start)}–${fmtMin(s.end)} น.`;
 }
 

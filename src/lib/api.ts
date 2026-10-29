@@ -2,7 +2,16 @@ import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getAdminRoom } from "./rooms";
-import { blockSlots, blockStarts, daySpan, MAX_DAYS, MAX_DURATION_DAYS, type SlotConfig } from "./slots";
+import {
+  blockSlots,
+  blockStarts,
+  daySpan,
+  fmtMin,
+  MAX_DAYS,
+  MAX_DURATION_DAYS,
+  MAX_PERIODS,
+  type SlotConfig,
+} from "./slots";
 
 export const json = <T>(data: T, status = 200) => NextResponse.json(data, { status });
 
@@ -62,6 +71,32 @@ export function scheduleError(c: SlotConfig): string | null {
   }
   return null;
 }
+
+const minuteSchema = z.number().int().min(0).max(1440).multipleOf(5, "เวลาต้องลงตัวทีละ 5 นาที");
+
+/** A room's own periods (period mode), returned sorted by start time. Empty = the default three. */
+export const periodsSchema = z
+  .array(
+    z
+      .object({
+        label: z.string().trim().min(1, "กรุณาตั้งชื่อช่วงเวลาให้ครบ").max(20, "ชื่อช่วงเวลายาวเกินไป (ไม่เกิน 20 ตัวอักษร)"),
+        start: minuteSchema,
+        end: minuteSchema,
+      })
+      .refine((p) => p.end > p.start, { message: "เวลาสิ้นสุดของแต่ละช่วงต้องหลังเวลาเริ่ม" }),
+  )
+  .max(MAX_PERIODS, `กำหนดได้ไม่เกิน ${MAX_PERIODS} ช่วง`)
+  .transform((ps) => [...ps].sort((a, b) => a.start - b.start))
+  .superRefine((ps, ctx) => {
+    const clash = ps.findIndex((p, i) => i > 0 && p.start < ps[i - 1].end);
+    if (clash > 0) {
+      const [a, b] = [ps[clash - 1], ps[clash]];
+      ctx.addIssue({
+        code: "custom",
+        message: `ช่วง “${a.label}” (ถึง ${fmtMin(a.end)}) ซ้อนกับ “${b.label}” (เริ่ม ${fmtMin(b.start)})`,
+      });
+    }
+  });
 
 /** Per-date slot picks — cleaned against the room with `cleanDateSlots` before saving. */
 export const dateSlotsSchema = z

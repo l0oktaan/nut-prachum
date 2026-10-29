@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 import {
   dateSlotsSchema,
+  periodsSchema,
   datesSchema,
   durationSchema,
   fail,
@@ -26,6 +27,7 @@ const CreateRoom = z
     slotMinutes: z.union([z.literal(30), z.literal(60)]).default(60),
     durationDays: durationSchema.default(1),
     dateSlots: dateSlotsSchema.default({}),
+    periods: periodsSchema.default([]),
     allowNewMembers: z.boolean().default(true),
     members: z.array(nameSchema).max(200, "รายชื่อสมาชิกมากเกินไป (ไม่เกิน 200 คน)").default([]),
     required: z.array(nameSchema).max(200).default([]),

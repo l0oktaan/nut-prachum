@@ -56,6 +56,9 @@ ALTER TABLE rooms ADD COLUMN IF NOT EXISTS duration_days int NOT NULL DEFAULT 1;
 -- Per-date slot keys, e.g. {"2026-11-03": [0]} (a date not listed offers every slot).
 ALTER TABLE rooms ADD COLUMN IF NOT EXISTS date_slots jsonb NOT NULL DEFAULT '{}';
 
+-- The room's own periods for period mode, e.g. [{"label":"เช้า","start":510,"end":720}]; [] = defaults.
+ALTER TABLE rooms ADD COLUMN IF NOT EXISTS periods jsonb NOT NULL DEFAULT '[]';
+
 -- Key members the meeting needs (ranked first when they can all make it).
 ALTER TABLE participants ADD COLUMN IF NOT EXISTS required boolean NOT NULL DEFAULT false;
 

@@ -5,10 +5,20 @@ import { useRouter } from "next/navigation";
 import { CalendarHeart, Clock, Clock3, Coffee, CopyPlus, PenLine, Sparkles, Sun, Users, X } from "lucide-react";
 import { DateSlotsField } from "./DateSlotsField";
 import { DurationField } from "./DurationField";
+import { isDefaultPeriods, PeriodsField, periodsProblem } from "./PeriodsField";
 import { MultiDatePicker } from "./MultiDatePicker";
 import { cx, ErrorNote, Segmented, Spinner, Switch } from "./ui";
 import { api, clearDraft, parseDraft, readDraftRaw, saveRoom, useClientValue, type RoomDraft } from "@/lib/client";
-import { cleanDateSlots, fmtMin, getSlots, slotsForDate, type SlotConfig, type TimeMode } from "@/lib/slots";
+import {
+  cleanDateSlots,
+  DEFAULT_PERIODS,
+  fmtMin,
+  getSlots,
+  slotsForDate,
+  type Period,
+  type SlotConfig,
+  type TimeMode,
+} from "@/lib/slots";
 
 const HOURS = Array.from({ length: 18 }, (_, i) => (i + 6) * 60); // 06:00 – 23:00
 
@@ -39,6 +49,9 @@ function RoomForm({ draft, onDismiss }: { draft: RoomDraft | null; onDismiss: ()
   const [slotMinutes, setSlotMinutes] = useState<30 | 60>(draft?.slotMinutes === 30 ? 30 : 60);
   const [durationDays, setDurationDays] = useState(draft?.durationDays ?? 1);
   const [dateSlots, setDateSlots] = useState<Record<string, number[]>>({});
+  const [periods, setPeriods] = useState<Period[]>(() =>
+    (draft?.periods?.length ? draft.periods : DEFAULT_PERIODS).map((p) => ({ ...p })),
+  );
   const [members, setMembers] = useState(draft?.members.join("\n") ?? "");
   const [allowNewMembers, setAllowNewMembers] = useState(draft?.allowNewMembers ?? true);
   const [busy, setBusy] = useState(false);
@@ -60,6 +73,15 @@ function RoomForm({ draft, onDismiss }: { draft: RoomDraft | null; onDismiss: ()
     slotMinutes,
     durationDays,
     dateSlots,
+    // Slot keys are positions in time order (the server sorts too), so per-date picks line up.
+    periods: [...periods].sort((a, b) => a.start - b.start),
+  };
+  const periodError = timeMode === "period" ? periodsProblem(periods) : null;
+  // Per-date picks point at periods by position: drop them when the periods' order or count changes.
+  const changePeriods = (next: Period[]) => {
+    const order = (ps: Period[]) => [...ps].sort((a, b) => a.start - b.start).map((p) => ps.indexOf(p)).join();
+    if (next.length !== periods.length || order(next) !== order(periods)) setDateSlots({});
+    setPeriods(next);
   };
   const slotCount = getSlots(config).length;
   const perDate = Object.keys(cleanDateSlots(config, dateSlots)).length > 0;
@@ -69,6 +91,10 @@ function RoomForm({ draft, onDismiss }: { draft: RoomDraft | null; onDismiss: ()
     e.preventDefault();
     if (!dates.length) {
       setError("กรุณาเลือกวันที่บนปฏิทินอย่างน้อย 1 วัน");
+      return;
+    }
+    if (periodError) {
+      setError(periodError);
       return;
     }
     setBusy(true);
@@ -87,6 +113,7 @@ function RoomForm({ draft, onDismiss }: { draft: RoomDraft | null; onDismiss: ()
           slotMinutes,
           durationDays,
           dateSlots: cleanDateSlots(config, dateSlots),
+          periods: timeMode === "period" && !isDefaultPeriods(periods) ? config.periods : [],
           allowNewMembers,
           members: memberList,
           required: requiredList,
@@ -204,7 +231,7 @@ function RoomForm({ draft, onDismiss }: { draft: RoomDraft | null; onDismiss: ()
         )}
         <p className="text-sm text-stone-500">
           {timeMode === "day" && "สมาชิกเลือกเป็นวัน เหมาะกับการนัดที่ยังไม่ต้องลงรายละเอียดเวลา"}
-          {timeMode === "period" && "แบ่งวันเป็น เช้า (09–12), บ่าย (13–16), เย็น (17–20) — เลือกง่ายบนมือถือ"}
+          {timeMode === "period" && "แบ่งวันเป็นช่วง ๆ ปรับชื่อและเวลาของแต่ละช่วงได้ — เลือกง่ายบนมือถือ"}
           {timeMode === "hour" && "ละเอียดที่สุด เหมาะกับจำนวนวันไม่มาก"}
           {dates.length > 0 && slotCount > 0 && (
             <span className="ml-1 font-semibold text-ink">
@@ -213,6 +240,7 @@ function RoomForm({ draft, onDismiss }: { draft: RoomDraft | null; onDismiss: ()
             </span>
           )}
         </p>
+        {timeMode === "period" && <PeriodsField value={periods} onChange={changePeriods} />}
         {timeMode !== "day" && <DateSlotsField config={config} value={dateSlots} onChange={setDateSlots} />}
       </Section>
 

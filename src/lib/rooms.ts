@@ -1,6 +1,6 @@
 import "server-only";
 import { isUniqueViolation, query, transaction } from "./db";
-import { getDates, getSlots, isOffered, type Level, type SlotConfig, type TimeMode } from "./slots";
+import { getDates, getSlots, isOffered, type Level, type Period, type SlotConfig, type TimeMode } from "./slots";
 import { hashSecret, isSlug, newSecret, newSlug, secretMatches } from "./tokens";
 import type {
   AdminSnapshot,
@@ -28,6 +28,7 @@ interface RoomRow {
   slot_minutes: number;
   duration_days: number;
   date_slots: Record<string, number[]>;
+  periods: Period[];
   allow_new_members: boolean;
   is_locked: boolean;
   final_date: string | null;
@@ -70,6 +71,7 @@ export function toRoomPublic(r: RoomRow): RoomPublic {
     slotMinutes: r.slot_minutes,
     durationDays: r.duration_days,
     dateSlots: r.date_slots,
+    periods: r.periods,
     allowNewMembers: r.allow_new_members,
     isLocked: r.is_locked,
     finalDate: r.final_date,
@@ -117,6 +119,7 @@ export interface CreateRoomInput {
   slotMinutes: number;
   durationDays: number;
   dateSlots: Record<string, number[]>;
+  periods: Period[];
   allowNewMembers: boolean;
   members: string[];
   /** Names (from `members`) marked as key members. */
@@ -134,8 +137,8 @@ export async function createRoom(input: CreateRoomInput) {
         const res = await db.query<RoomRow>(
           `INSERT INTO rooms (slug, title, description, organizer_name, dates, start_date, end_date,
              time_mode, day_start_min, day_end_min, slot_minutes, allow_new_members, admin_key_hash, duration_days,
-             date_slots)
-           VALUES ($1,$2,$3,$4,$5::date[],$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::jsonb) RETURNING *`,
+             date_slots, periods)
+           VALUES ($1,$2,$3,$4,$5::date[],$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::jsonb,$16::jsonb) RETURNING *`,
           [
             newSlug(),
             input.title,
@@ -152,6 +155,7 @@ export async function createRoom(input: CreateRoomInput) {
             hashSecret(adminKey),
             input.durationDays,
             JSON.stringify(input.dateSlots),
+            JSON.stringify(input.timeMode === "period" ? input.periods : []),
           ],
         );
         room = res.rows[0];
