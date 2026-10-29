@@ -61,7 +61,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     if (room.is_locked) return fail(403, "ผู้จัดปิดรับคำตอบแล้ว");
     if (!room.allow_new_members) return fail(403, "ห้องนี้รับเฉพาะรายชื่อที่ผู้จัดกำหนดไว้");
     if ((await countParticipants(room.id)) >= MAX_PARTICIPANTS) {
-      await logSecurityEvent("participant_cap", req, { slug, detail: input.name });
+      await logSecurityEvent("participant_cap", req, { slug });
       return fail(403, `ห้องนี้มีผู้เข้าร่วมครบ ${MAX_PARTICIPANTS} คนแล้ว กรุณาติดต่อผู้จัด`);
     }
     const added = await addParticipant(room.id, input.name, { invited: false, claim: true });

@@ -5,7 +5,7 @@ import {
   Activity,
   AlertTriangle,
   Database,
-  ExternalLink,
+  EyeOff,
   HardDrive,
   KeyRound,
   LogOut,
@@ -331,8 +331,6 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
 
 interface OpsRoom {
   slug: string;
-  title: string;
-  description: string;
   createdAt: string;
   startDate: string;
   endDate: string;
@@ -354,7 +352,7 @@ function RoomsTab({ onError }: { onError: (e: unknown) => void }) {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const remove = async (r: OpsRoom) => {
-    if (!confirm(`ลบห้อง “${r.title}” (${r.slug}) และคำตอบทั้งหมดถาวร?`)) return;
+    if (!confirm(`ลบห้อง ${r.slug} และคำตอบทั้งหมดถาวร?`)) return;
     try {
       await sa(`/api/superadmin/rooms/${r.slug}`, { method: "DELETE" });
       setActionError(null);
@@ -366,7 +364,13 @@ function RoomsTab({ onError }: { onError: (e: unknown) => void }) {
   };
 
   const resetKey = async (r: OpsRoom) => {
-    if (!confirm(`ออกลิงก์ผู้ดูแลใหม่ให้ “${r.title}”?\nลิงก์ผู้ดูแลเดิมจะใช้ไม่ได้ทันที — ยืนยันตัวตนผู้ขอก่อนส่งลิงก์ให้`)) return;
+    if (
+      !confirm(
+        `ออกลิงก์ผู้ดูแลใหม่ให้ห้อง ${r.slug}?\nลิงก์ผู้ดูแลเดิมจะใช้ไม่ได้ทันที — ยืนยันตัวตนผู้ขอก่อนส่งลิงก์ให้\n` +
+          "ลิงก์นี้มีไว้ส่งต่อให้ผู้จัดเท่านั้น ไม่ควรเปิดเอง (จะเห็นเนื้อหาและรายชื่อในห้อง)",
+      )
+    )
+      return;
     try {
       const res = await sa<{ adminUrl: string }>(`/api/superadmin/rooms/${r.slug}`, {
         method: "POST",
@@ -390,8 +394,9 @@ function RoomsTab({ onError }: { onError: (e: unknown) => void }) {
         }}
       >
         <input
-          className="input max-w-md flex-1"
-          placeholder="ค้นหาจากชื่อห้อง รายละเอียด หรือรหัสห้อง (slug)"
+          className="input max-w-xs flex-1 font-mono"
+          placeholder="รหัสห้อง เช่น adcfxkfv"
+          maxLength={8}
           value={input}
           onChange={(e) => setInput(e.target.value)}
         />
@@ -400,6 +405,14 @@ function RoomsTab({ onError }: { onError: (e: unknown) => void }) {
         </button>
         <RefreshButton loading={loading} onClick={refresh} />
       </form>
+
+      <p className="flex items-start gap-2 text-xs text-stone-500">
+        <EyeOff className="mt-px size-3.5 shrink-0" />
+        <span>
+          เพื่อความเป็นส่วนตัวของผู้ใช้ หน้านี้แสดงเฉพาะรหัสห้องและตัวเลข — ไม่แสดงชื่อเรื่อง รายละเอียด หรือรายชื่อสมาชิก
+          ผู้จัดที่ต้องการความช่วยเหลือให้แจ้งรหัสห้อง (8 ตัวท้ายลิงก์ เช่น /r/<b className="font-mono">adcfxkfv</b>)
+        </span>
+      </p>
 
       {newLink && (
         <section className="card-neon flex flex-col gap-2 p-4">
@@ -418,7 +431,7 @@ function RoomsTab({ onError }: { onError: (e: unknown) => void }) {
           <table className="w-full min-w-[44rem] text-left text-sm">
             <thead className="text-xs text-stone-500">
               <tr className="border-b border-line/5">
-                <th className="px-4 py-3 font-medium">ห้อง</th>
+                <th className="px-4 py-3 font-medium">รหัสห้อง</th>
                 <th className="px-4 py-3 font-medium">สร้างเมื่อ</th>
                 <th className="px-4 py-3 font-medium whitespace-nowrap">ตอบแล้ว</th>
                 <th className="px-4 py-3 font-medium">สถานะ</th>
@@ -428,12 +441,8 @@ function RoomsTab({ onError }: { onError: (e: unknown) => void }) {
             <tbody className="divide-y divide-line/5">
               {data.rooms.map((r) => (
                 <tr key={r.slug} className="align-top">
-                  <td className="max-w-xs px-4 py-3">
-                    <p className="truncate font-semibold">{r.title}</p>
-                    <p className="truncate text-xs text-stone-500">
-                      <span className="font-mono">{r.slug}</span>
-                      {r.description && ` · ${r.description}`}
-                    </p>
+                  <td className="px-4 py-3">
+                    <p className="font-mono font-semibold">{r.slug}</p>
                     <p className="text-xs text-stone-500">
                       วันที่ {r.startDate} → {r.endDate}
                     </p>
@@ -454,9 +463,6 @@ function RoomsTab({ onError }: { onError: (e: unknown) => void }) {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1 whitespace-nowrap">
-                      <a href={`/r/${r.slug}`} target="_blank" rel="noreferrer" className="btn btn-ghost btn-sm" title="เปิดหน้าสมาชิก">
-                        <ExternalLink className="size-3.5" />
-                      </a>
                       <button type="button" className="btn btn-ghost btn-sm" title="ออกลิงก์ผู้ดูแลใหม่ (กรณีผู้จัดทำลิงก์หาย)" onClick={() => resetKey(r)}>
                         <KeyRound className="size-3.5" />
                       </button>
@@ -469,7 +475,7 @@ function RoomsTab({ onError }: { onError: (e: unknown) => void }) {
               ))}
             </tbody>
           </table>
-          {data.rooms.length >= 100 && <p className="p-3 text-xs text-stone-500">แสดง 100 ห้องล่าสุด — ค้นหาเพื่อดูห้องอื่น</p>}
+          {data.rooms.length >= 100 && <p className="p-3 text-xs text-stone-500">แสดง 100 ห้องล่าสุด — ค้นหาด้วยรหัสห้องเพื่อดูห้องอื่น</p>}
         </div>
       )}
     </div>
@@ -563,10 +569,10 @@ function CleanupCard({
             <ul className="scroll-thin flex max-h-56 flex-col gap-1 overflow-y-auto text-xs">
               {data.sample.map((r) => (
                 <li key={r.slug} className="flex justify-between gap-3 rounded-xl bg-canvas px-3 py-1.5">
-                  <span className="truncate">
-                    <span className="font-mono text-stone-500">{r.slug}</span> {r.title}
+                  <span className="font-mono">{r.slug}</span>
+                  <span className="shrink-0 text-stone-500">
+                    {r.startDate} → {r.endDate} · ตอบ {r.responded}/{r.participants}
                   </span>
-                  <span className="shrink-0 text-stone-500">{r.endDate}</span>
                 </li>
               ))}
             </ul>

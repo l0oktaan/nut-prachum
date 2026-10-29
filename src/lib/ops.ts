@@ -66,10 +66,10 @@ export async function systemStatus() {
 
 /* ---------------------------------- rooms --------------------------------- */
 
+// The super admin manages rooms by code and numbers only: no titles, descriptions or member names
+// ever leave the server through these queries.
 export interface OpsRoom {
   slug: string;
-  title: string;
-  description: string;
   createdAt: string;
   startDate: string;
   endDate: string;
@@ -81,15 +81,13 @@ export interface OpsRoom {
 }
 
 const ROOM_COLUMNS = /* sql */ `
-  r.slug, r.title, r.description, r.created_at, r.start_date, r.end_date, r.final_date, r.is_locked,
+  r.slug, r.created_at, r.start_date, r.end_date, r.final_date, r.is_locked,
   (SELECT count(*)::int FROM participants p WHERE p.room_id = r.id) AS participants,
   (SELECT count(*)::int FROM participants p WHERE p.room_id = r.id AND p.responded_at IS NOT NULL) AS responded,
   (SELECT count(*)::int FROM availability a JOIN participants p ON p.id = a.participant_id WHERE p.room_id = r.id) AS answers`;
 
 type OpsRoomRow = {
   slug: string;
-  title: string;
-  description: string;
   created_at: Date;
   start_date: string;
   end_date: string;
@@ -102,8 +100,6 @@ type OpsRoomRow = {
 
 const toOpsRoom = (r: OpsRoomRow): OpsRoom => ({
   slug: r.slug,
-  title: r.title,
-  description: r.description,
   createdAt: r.created_at.toISOString(),
   startDate: r.start_date,
   endDate: r.end_date,
@@ -114,12 +110,14 @@ const toOpsRoom = (r: OpsRoomRow): OpsRoom => ({
   isLocked: r.is_locked,
 });
 
-/** Newest rooms first, optionally filtered by slug, title or description. */
+/** Newest rooms first, optionally filtered by the start of the room code (never by content). */
 export async function listRooms(search: string, limit = 100): Promise<OpsRoom[]> {
-  const q = search.trim();
+  const q = search.trim().toLowerCase();
+  // Anything that can't be part of a room code finds nothing (rather than falling back to "all").
+  if (!/^[a-z0-9]{0,8}$/.test(q)) return [];
   const rows = await query<OpsRoomRow>(
     `SELECT ${ROOM_COLUMNS} FROM rooms r
-      WHERE $1 = '' OR r.slug = $1 OR r.title ILIKE '%' || $1 || '%' OR r.description ILIKE '%' || $1 || '%'
+      WHERE r.slug LIKE $1 || '%'
       ORDER BY r.created_at DESC LIMIT $2`,
     [q, limit],
   );
