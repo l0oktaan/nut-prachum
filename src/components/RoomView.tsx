@@ -161,7 +161,7 @@ function IdentityBar({ me, slug, onSignOut }: { me: Me; slug: string; onSignOut:
     <div className="card p-4">
       <div className="flex flex-wrap items-center gap-3">
         <Avatar name={me.name} className="size-9 text-sm" />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-36 flex-1">
           <p className="text-xs text-stone-500">คุณกำลังตอบในชื่อ</p>
           <p className="truncate font-semibold">{me.name}</p>
         </div>
