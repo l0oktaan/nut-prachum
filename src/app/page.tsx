@@ -66,7 +66,7 @@ export default function LandingPage() {
       <section className="grid grid-cols-[minmax(0,1fr)] items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <div>
           <span className="badge-up mb-4 px-3 py-1">
-            <Sparkles className="size-3.5" /> ฟรี · ไม่ต้องล็อกอิน · ใช้ผ่าน LINE ได้
+            <Sparkles className="size-3.5" /> ฟรี · ไม่ต้องล็อกอิน · แชร์ผ่าน LINE ได้
           </span>
           <h1 className="text-4xl leading-tight font-extrabold tracking-tight text-balance sm:text-5xl">
             หาวันประชุมที่ทุกคนว่างตรงกัน ในลิงก์เดียว
