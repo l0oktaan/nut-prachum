@@ -1,0 +1,17 @@
+# Production overrides: served at https://setmeet.tontaan.tech through the host's Traefik
+# (host network, Let's Encrypt via the "letsencrypt" resolver).
+# Enabled by COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml in .env
+services:
+  db:
+    # Not reachable from outside the compose network.
+    ports: !reset []
+
+  app:
+    # Traefik reaches the container directly; no host port needed.
+    ports: !reset []
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.setmeet.rule: Host(`setmeet.tontaan.tech`)
+      traefik.http.routers.setmeet.entrypoints: websecure
+      traefik.http.routers.setmeet.tls.certresolver: letsencrypt
+      traefik.http.services.setmeet.loadbalancer.server.port: "3000"
