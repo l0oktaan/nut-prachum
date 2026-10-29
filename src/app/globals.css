@@ -25,6 +25,16 @@ body {
   color: var(--color-ink);
 }
 
+@layer base {
+  /* Tailwind v4 resets buttons to the arrow cursor; show the hand on anything clickable. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  select:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
+}
+
 @layer components {
   .card {
     @apply rounded-[24px] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03),0_10px_30px_-14px_rgba(0,0,0,0.12)];
