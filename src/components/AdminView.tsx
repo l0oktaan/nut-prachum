@@ -345,7 +345,7 @@ function Stat({
 }) {
   return (
     <div className={cx("flex flex-col justify-between gap-5 p-5", dark ? "card-dark" : "card")}>
-      <p className={cx("card-title text-sm", dark ? "text-white" : "text-ink")}>
+      <p className={cx("card-title text-sm", dark ? "text-white" : "text-fg")}>
         <span className={cx("icon-bubble", dark ? "bg-white/10 text-neon" : "bg-canvas")}>{icon}</span>
         {label}
       </p>
@@ -403,7 +403,7 @@ function ResponseStatus({ participants }: { participants: ParticipantAdmin[] }) 
           <span
             key={g.label}
             className={cx(
-              "absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-center leading-tight shadow-lg ring-4 ring-white transition-all",
+              "absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full text-center leading-tight shadow-lg ring-4 ring-surface transition-all",
               g.circle,
             )}
             style={{ ...g.pos, width: size(g.count), height: size(g.count) }}
@@ -479,7 +479,7 @@ function Members({
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
       <section className="card overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-black/5 px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line/5 px-5 py-4">
           <h2 className="font-semibold">รายชื่อและสถานะ</h2>
           {reminderText && <CopyButton text={reminderText} label="คัดลอกข้อความทวงคำตอบ" className="btn-secondary btn-sm" />}
         </div>
@@ -488,7 +488,7 @@ function Members({
             ยังไม่มีสมาชิก — เพิ่มรายชื่อทางขวา หรือรอให้สมาชิกเข้ามาใส่ชื่อเอง
           </p>
         ) : (
-          <ul className="divide-y divide-black/5">
+          <ul className="divide-y divide-line/5">
             {sorted.map((p) => (
               <MemberRow key={p.id} p={p} slug={slug} origin={origin} busy={busy} call={call} />
             ))}
@@ -563,7 +563,7 @@ function MemberRow({
           type="button"
           aria-pressed={p.required}
           title={p.required ? "เลิกเป็นสมาชิกหลัก" : "ตั้งเป็นสมาชิกหลัก (ต้องมา — จัดอันดับช่วงที่คนกลุ่มนี้ว่างครบก่อน)"}
-          className={cx("btn btn-sm", p.required ? "text-ink hover:bg-canvas" : "btn-ghost text-stone-400")}
+          className={cx("btn btn-sm", p.required ? "text-fg hover:bg-canvas" : "btn-ghost text-stone-400")}
           disabled={busy}
           onClick={() => call(url, { method: "PATCH", body: JSON.stringify({ action: "required", required: !p.required }) })}
         >
@@ -822,7 +822,7 @@ function DatesEditor({
               )}
               {added.length > 0 && (
                 <div>
-                  <p className="mb-1.5 text-sm font-semibold text-ink">เพิ่ม {added.length} วัน</p>
+                  <p className="mb-1.5 text-sm font-semibold text-fg">เพิ่ม {added.length} วัน</p>
                   <div className="flex flex-wrap gap-1.5">
                     {added.map((d) => (
                       <span key={d} className="chip bg-neon text-ink">
@@ -959,7 +959,7 @@ function Announcement({
         <p className="mt-1 mb-3 text-sm text-stone-500">
           สมาชิกที่เปิดลิงก์จะเห็นวันประชุมทันที — คัดลอกข้อความนี้ไปแจ้งในกลุ่มแชตได้เลย
         </p>
-        <pre className="rounded-2xl bg-canvas p-4 font-sans text-sm leading-relaxed wrap-anywhere whitespace-pre-wrap text-ink">
+        <pre className="rounded-2xl bg-canvas p-4 font-sans text-sm leading-relaxed wrap-anywhere whitespace-pre-wrap text-fg">
           {text}
         </pre>
       </div>

@@ -3,9 +3,10 @@
 import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarCheck2, CalendarDays, House, Menu, Plus, X } from "lucide-react";
+import { CalendarCheck2, CalendarDays, House, Menu, Monitor, Moon, Plus, Sun, X } from "lucide-react";
 import { cx } from "./ui";
 import { parseSavedRooms, readSavedRoomsRaw, useClientValue } from "@/lib/client";
+import { setThemePref, useThemePref, type ThemePref } from "@/lib/theme";
 
 export function Sidebar() {
   const [open, setOpen] = useState(false);
@@ -119,8 +120,40 @@ function SidebarNav({ onNavigate }: { onNavigate: () => void }) {
         )}
       </nav>
 
+      <ThemeToggle />
       <UpgradeCard onClick={onNavigate} />
     </>
+  );
+}
+
+const THEMES: { value: ThemePref; label: string; icon: React.ReactNode }[] = [
+  { value: "light", label: "สว่าง", icon: <Sun className="size-3.5" /> },
+  { value: "dark", label: "มืด", icon: <Moon className="size-3.5" /> },
+  { value: "system", label: "อัตโนมัติ", icon: <Monitor className="size-3.5" /> },
+];
+
+function ThemeToggle() {
+  const pref = useThemePref();
+  return (
+    <div className="mt-4 grid grid-cols-3 gap-1 rounded-full bg-white/5 p-1" role="radiogroup" aria-label="ธีมสี">
+      {THEMES.map((t) => (
+        <button
+          key={t.value}
+          type="button"
+          role="radio"
+          aria-checked={pref === t.value}
+          title={t.value === "system" ? "ตามการตั้งค่าของเครื่อง" : `โหมด${t.label}`}
+          onClick={() => setThemePref(t.value)}
+          className={cx(
+            "flex items-center justify-center gap-1 rounded-full py-1.5 text-xs font-medium transition",
+            pref === t.value ? "bg-white/15 text-white" : "text-stone-400 hover:text-white",
+          )}
+        >
+          {t.icon}
+          {t.label}
+        </button>
+      ))}
+    </div>
   );
 }
 

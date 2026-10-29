@@ -234,7 +234,7 @@ function RoomForm({ draft, onDismiss }: { draft: RoomDraft | null; onDismiss: ()
           {timeMode === "period" && "แบ่งวันเป็นช่วง ๆ ปรับชื่อและเวลาของแต่ละช่วงได้ — เลือกง่ายบนมือถือ"}
           {timeMode === "hour" && "ละเอียดที่สุด เหมาะกับจำนวนวันไม่มาก"}
           {dates.length > 0 && slotCount > 0 && (
-            <span className="ml-1 font-semibold text-ink">
+            <span className="ml-1 font-semibold text-fg">
               · ตาราง {dates.length} วัน × {slotCount} ช่วง
               {perDate && ` (เปิดให้เลือก ${cellCount} ช่อง)`}
             </span>
@@ -244,7 +244,7 @@ function RoomForm({ draft, onDismiss }: { draft: RoomDraft | null; onDismiss: ()
         {timeMode !== "day" && <DateSlotsField config={config} value={dateSlots} onChange={setDateSlots} />}
       </Section>
 
-      <Section icon={<Users className="size-4" />} tone="bg-canvas text-ink" title="รายชื่อสมาชิก (แนะนำ)">
+      <Section icon={<Users className="size-4" />} tone="bg-canvas text-fg" title="รายชื่อสมาชิก (แนะนำ)">
         <div>
           <textarea
             className="input min-h-28 resize-y"
@@ -254,14 +254,14 @@ function RoomForm({ draft, onDismiss }: { draft: RoomDraft | null; onDismiss: ()
           />
           <p className="hint">
             {memberList.length > 0 && (
-              <span className="font-semibold text-ink">
+              <span className="font-semibold text-fg">
                 {memberList.length} คน{requiredList.length > 0 && ` (สมาชิกหลัก ${requiredList.length} คน)`} ·{" "}
               </span>
             )}
             สมาชิกจะเลือกชื่อตัวเองจากรายการ ทำให้รู้ว่าใครตอบแล้ว/ยังไม่ตอบ และได้ลิงก์ส่วนตัวรายคน
           </p>
           <p className="hint">
-            ใส่ <b className="text-ink">*</b> หน้าชื่อ = <b className="text-ink">สมาชิกหลัก</b> ที่ต้องมา เช่น *ประธาน —
+            ใส่ <b className="text-fg">*</b> หน้าชื่อ = <b className="text-fg">สมาชิกหลัก</b> ที่ต้องมา เช่น *ประธาน —
             ระบบจะจัดอันดับช่วงที่สมาชิกหลักว่างครบไว้ก่อน
           </p>
         </div>
@@ -295,7 +295,7 @@ function Section({
 }) {
   return (
     <fieldset className="flex flex-col gap-4">
-      <legend className="mb-4 flex items-center gap-3 text-lg font-bold text-ink">
+      <legend className="mb-4 flex items-center gap-3 text-lg font-bold text-fg">
         <span className={cx("icon-bubble", tone)}>{icon}</span>
         {title}
       </legend>

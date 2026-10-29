@@ -15,7 +15,7 @@ export function RoomHeader({
   actions?: ReactNode;
   eyebrow?: ReactNode;
 }) {
-  const chip = "chip bg-white py-1.5 text-stone-600 shadow-sm";
+  const chip = "chip bg-surface py-1.5 text-stone-600 shadow-sm";
   return (
     <PageHeader
       eyebrow={eyebrow}

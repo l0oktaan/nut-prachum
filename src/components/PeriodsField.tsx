@@ -44,7 +44,7 @@ export function PeriodsField({ value, onChange }: { value: Period[]; onChange: (
       </div>
       <ul className="flex flex-col gap-1.5">
         {value.map((p, i) => (
-          <li key={i} className="flex flex-wrap items-center gap-2 rounded-2xl bg-white p-2">
+          <li key={i} className="flex flex-wrap items-center gap-2 rounded-2xl bg-surface p-2">
             <input
               className="input w-28 flex-1 px-3 py-1.5 text-sm sm:flex-none"
               value={p.label}

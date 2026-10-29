@@ -50,7 +50,7 @@ export function DateSlotsField({
               const p = dateParts(d);
               const offered = offeredOn(d);
               return (
-                <li key={d} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl bg-white px-3 py-2">
+                <li key={d} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-2xl bg-surface px-3 py-2">
                   <span className="w-24 shrink-0 text-sm">
                     <span className={p.weekend ? "text-lilac" : "text-stone-400"}>{p.weekday}</span>{" "}
                     <span className="font-semibold">

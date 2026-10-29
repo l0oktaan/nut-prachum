@@ -129,7 +129,7 @@ export function MultiDatePicker({
               title={`เลือก/ยกเลิกทุกวัน${w}ในเดือนนี้`}
               onClick={() => toggleGroup(weekdaysOfMonth(i))}
               className={cx(
-                "rounded-full py-1 text-xs font-semibold transition hover:bg-white",
+                "rounded-full py-1 text-xs font-semibold transition hover:bg-surface",
                 i === 0 || i === 6 ? "text-lilac" : "text-stone-400",
               )}
             >
@@ -153,10 +153,10 @@ export function MultiDatePicker({
                 className={cx(
                   "relative mx-auto grid aspect-square w-full max-w-12 place-items-center rounded-full text-base font-semibold transition",
                   on && "animate-pop bg-neon font-bold text-ink shadow-sm",
-                  !on && !past && "hover:bg-white hover:shadow-sm",
-                  !on && !past && (holiday ? "text-rose-500" : weekend ? "text-lilac" : "text-ink"),
+                  !on && !past && "hover:bg-surface hover:shadow-sm",
+                  !on && !past && (holiday ? "text-rose-500" : weekend ? "text-lilac" : "text-fg"),
                   past && "cursor-not-allowed text-stone-300",
-                  d === today && !on && "ring-2 ring-ink ring-inset",
+                  d === today && !on && "ring-2 ring-fg ring-inset",
                 )}
               >
                 {Number(d.slice(8))}
@@ -169,7 +169,7 @@ export function MultiDatePicker({
         </div>
 
         {monthHolidays.length > 0 && (
-          <ul className="mt-3 flex flex-col gap-1 border-t border-black/5 pt-3 text-xs text-stone-500">
+          <ul className="mt-3 flex flex-col gap-1 border-t border-line/5 pt-3 text-xs text-stone-500">
             {monthHolidays.map((d) => (
               <li key={d} className="flex items-baseline gap-2">
                 <span className="size-1.5 shrink-0 translate-y-[-1px] rounded-full bg-rose-500" />
@@ -206,7 +206,7 @@ export function MultiDatePicker({
       {value.length > 0 ? (
         <div>
           <p className="mb-2 text-sm font-medium text-stone-700">
-            เลือกแล้ว <span className="font-extrabold text-ink">{value.length}</span> วัน
+            เลือกแล้ว <span className="font-extrabold text-fg">{value.length}</span> วัน
             {value.length >= max && <span className="ml-1 text-xs text-rose-500">(สูงสุด {max} วัน)</span>}
           </p>
           <div className="flex max-h-36 flex-wrap gap-1.5 overflow-y-auto scroll-thin">

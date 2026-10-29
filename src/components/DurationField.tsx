@@ -21,7 +21,7 @@ export function DurationField({
     <div className="flex flex-col gap-3 rounded-[24px] bg-canvas p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="icon-bubble bg-white">
+          <span className="icon-bubble bg-surface">
             <CalendarRange className="size-4" />
           </span>
           <div>
@@ -29,7 +29,7 @@ export function DurationField({
             <p className="text-xs text-stone-500">เช่น สัมมนา 2 วัน ทุกคนต้องว่างครบทุกวัน</p>
           </div>
         </div>
-        <div className="flex items-center gap-1 rounded-full bg-white p-1 shadow-sm">
+        <div className="flex items-center gap-1 rounded-full bg-surface p-1 shadow-sm">
           <button
             type="button"
             onClick={() => step(-1)}

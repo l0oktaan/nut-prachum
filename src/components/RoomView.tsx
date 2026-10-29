@@ -173,7 +173,7 @@ function IdentityBar({ me, slug, onSignOut }: { me: Me; slug: string; onSignOut:
         </button>
       </div>
       {showLink && (
-        <div className="animate-fade-up mt-4 border-t border-black/5 pt-4">
+        <div className="animate-fade-up mt-4 border-t border-line/5 pt-4">
           <p className="mb-2 text-xs text-stone-500">
             เก็บลิงก์นี้ไว้เพื่อกลับมาแก้ไขคำตอบจากอุปกรณ์อื่น — อย่าแชร์ให้ผู้อื่น
           </p>
@@ -260,7 +260,7 @@ function WhoAreYou({
                   "flex items-center gap-2 rounded-full border py-1 pr-3.5 pl-1 text-sm transition",
                   p.claimed
                     ? "cursor-not-allowed border-transparent bg-canvas/60 text-stone-400"
-                    : "border-transparent bg-canvas hover:border-ink hover:bg-white",
+                    : "border-transparent bg-canvas hover:border-fg hover:bg-surface",
                 )}
               >
                 {busy === p.id ? <Spinner className="m-1.5" /> : <Avatar name={p.name} />}
@@ -279,7 +279,7 @@ function WhoAreYou({
 
       {allowNew && (
         <form
-          className={cx("flex max-w-md flex-col gap-2 sm:flex-row", invited.length > 0 && "mt-6 border-t border-black/5 pt-5")}
+          className={cx("flex max-w-md flex-col gap-2 sm:flex-row", invited.length > 0 && "mt-6 border-t border-line/5 pt-5")}
           onSubmit={(e) => {
             e.preventDefault();
             if (name.trim()) identify({ name }, "new");
@@ -464,7 +464,7 @@ function NoteField({
   };
 
   return (
-    <div className="mt-5 border-t border-black/5 pt-4">
+    <div className="mt-5 border-t border-line/5 pt-4">
       <label className="label" htmlFor="me-note">
         หมายเหตุถึงผู้จัด <span className="font-normal text-stone-400">(ไม่บังคับ)</span>
       </label>

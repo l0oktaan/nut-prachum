@@ -13,7 +13,7 @@ function TodayPill() {
   return (
     <div className="hidden items-center gap-3 text-sm text-stone-500 sm:flex">
       <span>{today}</span>
-      <span className="chip bg-white py-2 pr-4 pl-3 text-sm font-semibold text-ink shadow-sm">
+      <span className="chip bg-surface py-2 pr-4 pl-3 text-sm font-semibold text-fg shadow-sm">
         <CalendarDays className="size-4" /> วันนี้
       </span>
     </div>

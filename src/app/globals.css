@@ -1,18 +1,63 @@
 @import "tailwindcss";
 
-/* Design tokens — see Design.md: dark sidebar, light canvas, lime + soft-purple accents. */
+/* Light/dark comes from <html data-theme>, set before first paint by the script in layout.tsx. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/*
+ * Design tokens — see Design.md: dark sidebar, light canvas, lime + soft-purple accents.
+ * Theme-aware ones point at the variables below so they switch at runtime:
+ *   fg       main text, rings          surface  cards and raised controls
+ *   canvas   page and recessed fills   line     hairlines (used with opacity, e.g. border-line/5)
+ *   ink      dark fills (primary buttons, chips, dark cards, sidebar) and text on neon
+ */
 @theme inline {
   --font-sans: var(--font-jakarta), var(--font-plex-thai), ui-sans-serif, system-ui, sans-serif;
-  --color-ink: #1a1a1c;
-  --color-ink-soft: #2a2a2e;
-  --color-canvas: #f5f5f7;
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-fg: var(--fg);
+  --color-surface: var(--surface);
+  --color-canvas: var(--canvas);
+  --color-line: var(--line);
   --color-neon: #d4ff2b;
   --color-lilac: #a78bfa;
-  --color-lilac-soft: #ddd6fe;
+  --color-lilac-soft: var(--lilac-soft);
 }
 
 :root {
   color-scheme: light;
+  --ink: #1a1a1c;
+  --ink-soft: #2a2a2e;
+  --fg: #1a1a1c;
+  --surface: #ffffff;
+  --canvas: #f5f5f7;
+  --line: #000000;
+  --lilac-soft: #ddd6fe;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #26262c; /* a step above the surface, so dark buttons and panels still stand out */
+  --ink-soft: #34343c;
+  --fg: #ececf0;
+  --surface: #19191d;
+  --canvas: #0f0f12;
+  --line: #ffffff;
+  --lilac-soft: #3b3366;
+
+  /* Tailwind palette steps the UI uses, re-mapped so text stays readable and fills stay subtle. */
+  --color-stone-200: oklch(32% 0.008 60);
+  --color-stone-300: oklch(42% 0.01 60);
+  --color-stone-500: oklch(68% 0.012 58);
+  --color-stone-600: oklch(78% 0.009 60);
+  --color-stone-700: oklch(86.9% 0.005 56.366);
+  --color-stone-800: oklch(92.3% 0.003 48.717);
+  --color-rose-50: oklch(25% 0.06 12);
+  --color-rose-100: oklch(30% 0.08 12);
+  --color-rose-200: oklch(38% 0.1 12);
+  --color-rose-600: oklch(71.2% 0.194 13.428);
+  --color-rose-700: oklch(81% 0.117 11.638);
+  --color-violet-800: oklch(89.4% 0.057 293.283);
+  --color-violet-950: oklch(94.3% 0.029 294.588);
 }
 
 html {
@@ -22,7 +67,7 @@ html {
 
 body {
   background: var(--color-canvas);
-  color: var(--color-ink);
+  color: var(--color-fg);
 }
 
 @layer base {
@@ -37,7 +82,7 @@ body {
 
 @layer components {
   .card {
-    @apply rounded-[24px] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03),0_10px_30px_-14px_rgba(0,0,0,0.12)];
+    @apply rounded-[24px] bg-surface shadow-[0_1px_2px_rgba(0,0,0,0.03),0_10px_30px_-14px_rgba(0,0,0,0.12)];
   }
   .card-dark {
     @apply rounded-[24px] bg-ink text-white shadow-[0_18px_40px_-18px_rgba(0,0,0,0.5)];
@@ -52,22 +97,22 @@ body {
     @apply mt-1.5 text-xs text-stone-500;
   }
   .input {
-    @apply w-full rounded-2xl border border-transparent bg-canvas px-4 py-2.5 text-base text-ink outline-none transition placeholder:text-stone-400 focus:border-ink/15 focus:bg-white focus:ring-4 focus:ring-neon/50 disabled:opacity-60;
+    @apply w-full rounded-2xl border border-transparent bg-canvas px-4 py-2.5 text-base text-fg outline-none transition placeholder:text-stone-400 focus:border-fg/15 focus:bg-surface focus:ring-4 focus:ring-neon/50 disabled:opacity-60;
   }
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold whitespace-nowrap transition select-none active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40;
   }
   .btn-primary {
-    @apply bg-ink text-white hover:bg-black;
+    @apply bg-ink text-white hover:bg-black dark:ring-1 dark:ring-line/10;
   }
   .btn-neon {
     @apply bg-neon text-ink hover:brightness-95;
   }
   .btn-secondary {
-    @apply bg-white text-ink ring-1 ring-black/10 hover:bg-canvas;
+    @apply bg-surface text-fg ring-1 ring-line/10 hover:bg-canvas;
   }
   .btn-ghost {
-    @apply text-stone-600 hover:bg-canvas hover:text-ink;
+    @apply text-stone-600 hover:bg-canvas hover:text-fg;
   }
   .btn-danger {
     @apply text-rose-500 hover:bg-rose-50;
@@ -109,6 +154,14 @@ body {
   background-image: repeating-linear-gradient(
     135deg,
     rgb(0 0 0 / 0.05) 0 2px,
+    transparent 2px 7px
+  );
+}
+
+[data-theme="dark"] .cell-closed {
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgb(255 255 255 / 0.06) 0 2px,
     transparent 2px 7px
   );
 }

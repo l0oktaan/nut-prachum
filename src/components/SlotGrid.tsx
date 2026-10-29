@@ -45,7 +45,7 @@ function GridFrame({
           gridTemplateColumns: `${compact ? 56 : 72}px repeat(${dates.length}, minmax(${compact ? 44 : 56}px, 1fr))`,
         }}
       >
-        <div className="sticky left-0 z-10 bg-white" />
+        <div className="sticky left-0 z-10 bg-surface" />
         {dates.map((d) => {
           const p = dateParts(d);
           const holiday = holidays[d];
@@ -58,13 +58,13 @@ function GridFrame({
               title={[holiday, onDateClick && "คลิกเพื่อเลือก/ยกเลิกทั้งวัน"].filter(Boolean).join(" · ") || undefined}
               className={cx(
                 "flex flex-col items-center rounded-lg py-1.5 leading-tight",
-                onDateClick && "transition hover:bg-white hover:shadow-sm",
+                onDateClick && "transition hover:bg-surface hover:shadow-sm",
               )}
             >
               <span className={cx("text-xs", holiday ? "text-rose-500" : p.weekend ? "text-lilac" : "text-stone-400")}>
                 {p.weekday}
               </span>
-              <span className={cx("text-lg font-extrabold", holiday ? "text-rose-500" : "text-ink")}>{p.day}</span>
+              <span className={cx("text-lg font-extrabold", holiday ? "text-rose-500" : "text-fg")}>{p.day}</span>
               <span className="text-xs text-stone-400">{p.month}</span>
             </Header>
           );
@@ -74,7 +74,7 @@ function GridFrame({
           <Fragment key={slot.key}>
             <div
               className={cx(
-                "sticky left-0 z-10 flex flex-col justify-center bg-white pr-2 text-right leading-tight",
+                "sticky left-0 z-10 flex flex-col justify-center bg-surface pr-2 text-right leading-tight",
                 compact ? "text-xs text-stone-500 tabular-nums" : "text-sm font-medium text-stone-700",
               )}
             >
@@ -190,7 +190,7 @@ export function EditGrid({
                 cellHeight(config),
                 level === 2 && "border-neon bg-neon text-ink",
                 level === 1 && "border-lilac-soft bg-lilac-soft text-violet-800",
-                !level && "border-transparent bg-canvas hover:border-black/10 hover:bg-stone-200/60",
+                !level && "border-transparent bg-canvas hover:border-line/10 hover:bg-stone-200/60",
               )}
             >
               {level === 2 && <Check className="size-4" strokeWidth={2.5} />}
@@ -243,7 +243,7 @@ export function HeatGrid({
             className={cx(
               "relative grid w-full place-items-center rounded-2xl transition",
               cellHeight(config),
-              selectedKeys?.has(key) ? "bg-canvas ring-2 ring-ink" : onSelect && "hover:bg-canvas",
+              selectedKeys?.has(key) ? "bg-canvas ring-2 ring-fg" : onSelect && "hover:bg-canvas",
             )}
           >
             <span
@@ -251,7 +251,7 @@ export function HeatGrid({
               className={cx(
                 "grid aspect-square h-[85%] place-items-center rounded-full text-xs font-bold tabular-nums",
                 ratio > 0 ? (ratio > 0.6 ? "text-white" : "text-violet-950") : "bg-canvas",
-                isFinal && "ring-[3px] ring-ink",
+                isFinal && "ring-[3px] ring-fg",
               )}
             >
               {yes + maybe > 0 && (
@@ -262,7 +262,7 @@ export function HeatGrid({
               )}
             </span>
             {(isFinal || bestKeys?.has(key)) && (
-              <span className="absolute top-0 right-0.5 grid size-4 place-items-center rounded-full bg-neon ring-2 ring-white">
+              <span className="absolute top-0 right-0.5 grid size-4 place-items-center rounded-full bg-neon ring-2 ring-surface">
                 <Star className="size-2.5 fill-ink text-ink" />
               </span>
             )}
@@ -278,13 +278,13 @@ export function Legend({ mode }: { mode: "edit" | "heat" }) {
     return (
       <div className="flex flex-wrap items-center gap-4 text-xs text-stone-500">
         <span className="flex items-center gap-1.5">
-          <span className="size-3.5 rounded-full bg-neon ring-1 ring-black/10" /> สะดวก
+          <span className="size-3.5 rounded-full bg-neon ring-1 ring-line/10" /> สะดวก
         </span>
         <span className="flex items-center gap-1.5">
           <span className="size-3.5 rounded-full bg-lilac-soft" /> ถ้าจำเป็น
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="size-3.5 rounded-full bg-canvas ring-1 ring-black/5" /> ไม่สะดวก
+          <span className="size-3.5 rounded-full bg-canvas ring-1 ring-line/5" /> ไม่สะดวก
         </span>
       </div>
     );

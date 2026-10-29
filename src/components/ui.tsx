@@ -62,7 +62,7 @@ export function Segmented<T extends string | number>({
   className?: string;
 }) {
   return (
-    <div className={cx("inline-flex rounded-full bg-white p-1 shadow-sm", className)} role="radiogroup">
+    <div className={cx("inline-flex rounded-full bg-surface p-1 shadow-sm", className)} role="radiogroup">
       {options.map((o) => (
         <button
           key={String(o.value)}
@@ -74,7 +74,7 @@ export function Segmented<T extends string | number>({
             "flex flex-1 items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition",
             value === o.value
               ? "bg-neon text-ink"
-              : "text-stone-500 hover:text-ink",
+              : "text-stone-500 hover:text-fg",
           )}
         >
           {o.label}
@@ -145,8 +145,8 @@ export function Avatar({ name, className }: { name: string; className?: string }
     "bg-lilac-soft text-violet-800",
     "bg-ink text-neon",
     "bg-lilac text-white",
-    "bg-stone-200 text-ink",
-    "bg-ink-soft text-lilac-soft",
+    "bg-stone-200 text-fg",
+    "bg-ink-soft text-violet-200",
   ];
   let h = 0;
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;

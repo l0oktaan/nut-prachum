@@ -200,7 +200,7 @@ function BestTimes({
           </span>
           ช่วงเวลาที่ดีที่สุด
         </h2>
-        <span className="chip bg-white/10 text-stone-300">
+        <span className="chip bg-white/10 text-white/70">
           {room.durationDays > 1 ? `${room.durationDays} วันติดกัน` : `${getDates(room).length} วัน`}
         </span>
       </div>
@@ -273,7 +273,7 @@ function BestTimes({
                 <span
                   className={cx(
                     "grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold",
-                    i === 0 ? "bg-neon text-ink" : "bg-white/10 text-stone-300",
+                    i === 0 ? "bg-neon text-ink" : "bg-white/10 text-white/70",
                   )}
                 >
                   {i + 1}
@@ -378,7 +378,7 @@ function CellDetail({
                     onPickFinal(date, slot, false);
                   }
                 }}
-                className="text-xs font-medium text-stone-500 underline-offset-2 hover:text-ink hover:underline"
+                className="text-xs font-medium text-stone-500 underline-offset-2 hover:text-fg hover:underline"
               >
                 ยืนยันวันอย่างเดียว (ยังรับคำตอบต่อ)
               </button>
@@ -398,7 +398,7 @@ function CellDetail({
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <NameGroup title={multiDay ? "สะดวกครบทุกวัน" : "สะดวก"} dot="bg-neon ring-1 ring-black/10" people={yes} />
+        <NameGroup title={multiDay ? "สะดวกครบทุกวัน" : "สะดวก"} dot="bg-neon ring-1 ring-line/10" people={yes} />
         <NameGroup title={multiDay ? "ว่างทุกวัน (บางวันถ้าจำเป็น)" : "ถ้าจำเป็น"} dot="bg-lilac" people={maybe} />
         <NameGroup title={multiDay ? "ไม่ว่างบางวัน" : "ไม่สะดวก"} dot="bg-ink" people={no} />
         <NameGroup title="ยังไม่ตอบ" dot="bg-stone-300" people={pending} />
@@ -420,7 +420,7 @@ function NameGroup({ title, dot, people }: { title: string; dot: string; people:
           <span key={p.id} className="flex items-center gap-1.5 rounded-full bg-canvas py-0.5 pr-3 pl-0.5 text-xs font-medium">
             <Avatar name={p.name} className="size-6 text-[10px]" />
             {p.name}
-            {p.required && <Star className="size-3 fill-neon text-ink" aria-label="สมาชิกหลัก" />}
+            {p.required && <Star className="size-3 fill-neon text-fg" aria-label="สมาชิกหลัก" />}
           </span>
         ))}
       </div>

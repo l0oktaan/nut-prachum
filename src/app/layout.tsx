@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans_Thai, Plus_Jakarta_Sans } from "next/font/google";
 import { Sidebar } from "@/components/Sidebar";
+import { themeInitScript } from "@/lib/theme-init";
 import "./globals.css";
 
 // Plus Jakarta Sans has no Thai glyphs; the browser falls back to IBM Plex Sans Thai for those.
@@ -27,7 +28,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="th" className={`${jakarta.variable} ${plexThai.variable} h-full antialiased`}>
+    // data-theme is set by the inline script before hydration, so the server's <html> differs by design.
+    <html lang="th" className={`${jakarta.variable} ${plexThai.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="min-h-full font-sans">
         <Sidebar />
         <div className="flex min-h-screen flex-col lg:pl-[17.5rem]">
