@@ -2,6 +2,7 @@ import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getAdminRoom } from "./rooms";
+import { logSecurityEvent } from "./security-log";
 import {
   blockSlots,
   blockStarts,
@@ -39,10 +40,12 @@ export const publicOrigin = (req: NextRequest) => process.env.APP_URL || req.nex
 
 /** Resolves the room only when the request carries its admin key. */
 export async function requireAdmin(req: NextRequest, slug: string) {
-  const room = await getAdminRoom(slug, adminKeyOf(req));
-  return room
-    ? { ok: true as const, room }
-    : { ok: false as const, res: fail(403, "ลิงก์ผู้ดูแลไม่ถูกต้อง") };
+  const key = adminKeyOf(req);
+  const room = await getAdminRoom(slug, key);
+  if (room) return { ok: true as const, room };
+  // A wrong key (not a missing one) is worth recording: repeated ones look like guessing.
+  if (key) await logSecurityEvent("admin_key_failed", req, { slug: slug.slice(0, 40) });
+  return { ok: false as const, res: fail(403, "ลิงก์ผู้ดูแลไม่ถูกต้อง") };
 }
 
 export const nameSchema = z

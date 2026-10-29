@@ -13,6 +13,7 @@ import {
   touchParticipant,
 } from "@/lib/rooms";
 import { clearSession, readSessionParticipant, setSession } from "@/lib/session";
+import { logSecurityEvent } from "@/lib/security-log";
 import { isSlug } from "@/lib/tokens";
 
 type Ctx = RouteContext<"/api/rooms/[slug]/me">;
@@ -46,7 +47,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   let participant;
   if ("token" in input) {
     const found = await findParticipantByToken(room.id, input.token);
-    if (!found) return fail(404, "ลิงก์ส่วนตัวนี้ใช้ไม่ได้แล้ว กรุณาขอลิงก์ใหม่จากผู้จัด");
+    if (!found) {
+      await logSecurityEvent("personal_link_failed", req, { slug });
+      return fail(404, "ลิงก์ส่วนตัวนี้ใช้ไม่ได้แล้ว กรุณาขอลิงก์ใหม่จากผู้จัด");
+    }
     participant = await touchParticipant(found.id);
   } else if ("participantId" in input) {
     participant = await claimParticipant(room.id, input.participantId);
@@ -57,6 +61,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     if (room.is_locked) return fail(403, "ผู้จัดปิดรับคำตอบแล้ว");
     if (!room.allow_new_members) return fail(403, "ห้องนี้รับเฉพาะรายชื่อที่ผู้จัดกำหนดไว้");
     if ((await countParticipants(room.id)) >= MAX_PARTICIPANTS) {
+      await logSecurityEvent("participant_cap", req, { slug, detail: input.name });
       return fail(403, `ห้องนี้มีผู้เข้าร่วมครบ ${MAX_PARTICIPANTS} คนแล้ว กรุณาติดต่อผู้จัด`);
     }
     const added = await addParticipant(room.id, input.name, { invited: false, claim: true });

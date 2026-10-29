@@ -12,6 +12,12 @@ services:
     environment:
       COOKIE_SECURE: "true"
       APP_URL: https://setmeet.tontaan.tech
+      # Enables /superadmin (unset or under 24 characters = the page doesn't exist).
+      SUPERADMIN_TOKEN: ${SUPERADMIN_TOKEN:-}
+      TRAEFIK_LOG_DIR: /var/log/traefik-host
+    volumes:
+      # Traefik's access log, read-only, for the super admin security tab.
+      - /var/log/traefik:/var/log/traefik-host:ro
     labels:
       traefik.enable: "true"
       traefik.http.routers.setmeet.rule: Host(`setmeet.tontaan.tech`)
@@ -25,6 +31,15 @@ services:
       traefik.http.routers.setmeet-create.tls.certresolver: letsencrypt
       traefik.http.routers.setmeet-create.middlewares: setmeet-create-ratelimit
       traefik.http.routers.setmeet-create.service: setmeet
+      # The super admin page and API get their own, stricter limit.
+      traefik.http.routers.setmeet-superadmin.rule: Host(`setmeet.tontaan.tech`) && (PathPrefix(`/superadmin`) || PathPrefix(`/api/superadmin`))
+      traefik.http.routers.setmeet-superadmin.entrypoints: websecure
+      traefik.http.routers.setmeet-superadmin.tls.certresolver: letsencrypt
+      traefik.http.routers.setmeet-superadmin.middlewares: setmeet-superadmin-ratelimit
+      traefik.http.routers.setmeet-superadmin.service: setmeet
+      traefik.http.middlewares.setmeet-superadmin-ratelimit.ratelimit.average: "60"
+      traefik.http.middlewares.setmeet-superadmin-ratelimit.ratelimit.period: 1m
+      traefik.http.middlewares.setmeet-superadmin-ratelimit.ratelimit.burst: "30"
       # Per client IP (Traefik sees it directly on the host network).
       traefik.http.middlewares.setmeet-ratelimit.ratelimit.average: "30"
       traefik.http.middlewares.setmeet-ratelimit.ratelimit.burst: "60"

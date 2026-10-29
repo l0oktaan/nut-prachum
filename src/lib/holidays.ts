@@ -9,6 +9,15 @@ const TTL_MS = 12 * 60 * 60 * 1000;
 export type Holidays = Record<string, string>;
 
 let cache: { at: number; data: Holidays } | null = null;
+let lastGood: string | null = null;
+let lastError: string | null = null;
+
+/** For the super admin status page. */
+export const holidaysStatus = () => ({
+  count: cache ? Object.keys(cache.data).length : null,
+  fetchedAt: lastGood,
+  lastError,
+});
 
 /** Public holidays only — the feed also lists observances (วันสำคัญ) such as Valentine's Day. */
 function parse(ics: string): Holidays {
@@ -34,8 +43,11 @@ export async function getHolidays(): Promise<Holidays> {
     const data = parse(await res.text());
     if (!Object.keys(data).length) throw new Error("holidays feed: no public holidays found");
     cache = { at: Date.now(), data };
+    lastGood = new Date().toISOString();
+    lastError = null;
   } catch (err) {
     console.warn("[holidays]", (err as Error).message);
+    lastError = (err as Error).message;
     // Retry in an hour rather than on every request.
     cache = { at: Date.now() - TTL_MS + 60 * 60 * 1000, data: cache?.data ?? {} };
   }

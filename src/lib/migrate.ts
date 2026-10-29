@@ -62,6 +62,17 @@ ALTER TABLE rooms ADD COLUMN IF NOT EXISTS periods jsonb NOT NULL DEFAULT '[]';
 -- Key members the meeting needs (ranked first when they can all make it).
 ALTER TABLE participants ADD COLUMN IF NOT EXISTS required boolean NOT NULL DEFAULT false;
 
+-- Security-relevant events for the super admin page (failed admin keys, logins, deletions…).
+CREATE TABLE IF NOT EXISTS security_events (
+  id      bigserial PRIMARY KEY,
+  at      timestamptz NOT NULL DEFAULT now(),
+  kind    text NOT NULL,
+  ip      text,
+  slug    text,
+  detail  text NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS security_events_at_idx ON security_events (at DESC);
+
 -- A member's note to the organizer, e.g. "busy until 15:00 on the 3rd".
 ALTER TABLE participants ADD COLUMN IF NOT EXISTS note text NOT NULL DEFAULT '';
 `;

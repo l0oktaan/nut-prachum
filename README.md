@@ -112,6 +112,31 @@ npm run dev
 สีหลักเป็น token ที่สลับตามธีมใน [globals.css](src/app/globals.css): `fg` (ตัวอักษร) `surface` (การ์ด) `canvas` (พื้นหลัง)
 `line` (เส้นขอบ ใช้คู่กับ opacity) และ `ink` (ปุ่ม/แผงสีเข้ม และตัวอักษรบนพื้นเขียว) — โค้ดใหม่ควรใช้ token เหล่านี้แทน `text-ink`/`bg-white`/`border-black`
 
+## Super admin (`/superadmin`)
+
+หน้าดูแลระบบสำหรับเจ้าของเซิร์ฟเวอร์ — **ปิดอยู่จนกว่าจะตั้ง `SUPERADMIN_TOKEN`** (อย่างน้อย 24 ตัวอักษร) ใน `.env`
+ไม่มีลิงก์จากหน้าใดในเว็บ และตั้ง `noindex`
+
+| แท็บ | ทำอะไร |
+|---|---|
+| สถานะระบบ | จำนวนห้อง/ผู้เข้าร่วม, ฐานข้อมูล (latency, ขนาด, การเชื่อมต่อ), แอป (uptime, หน่วยความจำ), ดิสก์, ข้อมูลวันหยุด |
+| ห้องทั้งหมด | ค้นหาห้อง, เปิดหน้าสมาชิก, **ออกลิงก์ผู้ดูแลใหม่** (เมื่อผู้จัดทำลิงก์หาย — ลิงก์เดิมใช้ไม่ได้ทันที), ลบห้อง |
+| ล้างข้อมูลขยะ | ลบห้องที่ผ่านวันประชุมไปนานแล้ว / ห้องร้างที่ไม่มีใครตอบ — แสดงจำนวนและตัวอย่างก่อนลบ |
+| ความปลอดภัย | สรุป access log ของ Traefik (เฉพาะโดเมนนี้ ย้อนหลังสูงสุด 7 วัน): IP ที่เรียกมาก, ถูก rate limit, การสแกนหาช่องโหว่, 401/403/5xx ล่าสุด + เหตุการณ์จากแอป (ลิงก์ผู้ดูแลผิด, ลิงก์ส่วนตัวผิด, ห้องเต็ม, การเข้าสู่ระบบ/ลบ/ล้างของ super admin) เก็บ 90 วัน |
+
+**การเข้าถึง**
+1. ดูรหัสบนเซิร์ฟเวอร์: `grep SUPERADMIN_TOKEN /opt/nut-prachum/.env`
+2. เปิด `https://setmeet.tontaan.tech/superadmin` แล้วใส่รหัส — ได้ session 8 ชั่วโมง (cookie `HttpOnly`, `Secure`, `SameSite=Strict`)
+3. ใส่ผิด 5 ครั้งต่อ IP ระงับ 15 นาที; Traefik จำกัด 60 ครั้ง/นาทีต่อ IP สำหรับ path นี้
+4. เปลี่ยนรหัส (และบังคับออกจากระบบทุกเครื่อง): แก้ `SUPERADMIN_TOKEN` ใน `.env` แล้ว `docker compose up -d app`
+5. ปิดหน้านี้: ลบบรรทัด `SUPERADMIN_TOKEN` แล้ว `docker compose up -d app` (ทุก path ตอบ 404)
+
+ถ้ามี IP คงที่ จำกัดให้เข้าได้เฉพาะ IP นั้นโดยเพิ่ม label ใน `docker-compose.prod.yml`:
+```yaml
+traefik.http.routers.setmeet-superadmin.middlewares: setmeet-superadmin-ratelimit,setmeet-superadmin-ip
+traefik.http.middlewares.setmeet-superadmin-ip.ipallowlist.sourcerange: "203.0.113.10/32"
+```
+
 ## สร้างนัดซ้ำ
 
 ปุ่ม **"สร้างนัดซ้ำ"** ที่หน้าผู้ดูแลเปิดฟอร์มสร้างห้องใหม่ (`/?repeat={slug}`) ที่เติมหัวข้อ รายละเอียด ชื่อผู้จัด
