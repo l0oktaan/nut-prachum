@@ -94,6 +94,15 @@ body {
   );
 }
 
+/* Grid cells the organizer didn't open on that date. */
+.cell-closed {
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgb(0 0 0 / 0.05) 0 2px,
+    transparent 2px 7px
+  );
+}
+
 /* Thin, unobtrusive scrollbars for the scrolling grids. */
 .scroll-thin {
   scrollbar-width: thin;

@@ -1,4 +1,4 @@
-import { blockDays, blockStarts, cellKey, getDates, getSlots, type SlotConfig } from "./slots";
+import { blockDays, blockSlots, blockStarts, cellKey, getDates, slotsForDate, type SlotConfig } from "./slots";
 import type { Cell } from "./types";
 
 export interface CellTally {
@@ -15,7 +15,7 @@ export interface CellTally {
 export function tally(config: SlotConfig, cells: Cell[]): Map<string, CellTally> {
   const map = new Map<string, CellTally>();
   for (const date of getDates(config)) {
-    for (const s of getSlots(config)) {
+    for (const s of slotsForDate(config, date)) {
       const key = cellKey(date, s.key);
       map.set(key, { key, date, days: [date], slot: s.key, yes: [], maybe: [] });
     }
@@ -30,8 +30,8 @@ export function tally(config: SlotConfig, cells: Cell[]): Map<string, CellTally>
 
 /**
  * Candidate meetings. For multi-day rooms, each candidate is the same slot on `durationDays`
- * consecutive days: a person counts only if they marked every one of those days —
- * "available" if all days are available, otherwise "if needed".
+ * consecutive days (only slots offered on all of them): a person counts only if they marked every
+ * one of those days — "available" if all days are available, otherwise "if needed".
  */
 export function candidates(config: SlotConfig, cellTallies: Map<string, CellTally>): Map<string, CellTally> {
   if (config.durationDays <= 1) return cellTallies;
@@ -39,7 +39,7 @@ export function candidates(config: SlotConfig, cellTallies: Map<string, CellTall
   const offered = new Set(getDates(config));
   for (const start of blockStarts(config)) {
     const days = blockDays(config, start, offered)!;
-    for (const s of getSlots(config)) {
+    for (const s of blockSlots(config, start, offered)) {
       const parts = days.map((d) => cellTallies.get(cellKey(d, s.key))!);
       const marked = (t: CellTally) => new Set([...t.yes, ...t.maybe]);
       const all = parts.slice(1).reduce((acc, t) => {

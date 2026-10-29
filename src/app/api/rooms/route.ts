@@ -1,17 +1,18 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import {
+  dateSlotsSchema,
   datesSchema,
   durationSchema,
   fail,
   json,
   nameSchema,
-  noBlockMessage,
   parseBody,
+  scheduleError,
   uniqueNames,
 } from "@/lib/api";
 import { createRoom } from "@/lib/rooms";
-import { blockStarts } from "@/lib/slots";
+import { cleanDateSlots, type SlotConfig } from "@/lib/slots";
 
 const CreateRoom = z
   .object({
@@ -24,6 +25,7 @@ const CreateRoom = z
     dayEndMin: z.number().int().min(0).max(1440).default(1080),
     slotMinutes: z.union([z.literal(30), z.literal(60)]).default(60),
     durationDays: durationSchema.default(1),
+    dateSlots: dateSlotsSchema.default({}),
     allowNewMembers: z.boolean().default(true),
     members: z.array(nameSchema).max(200, "รายชื่อสมาชิกมากเกินไป (ไม่เกิน 200 คน)").default([]),
   })
@@ -34,10 +36,20 @@ const CreateRoom = z
 export async function POST(req: NextRequest) {
   const body = await parseBody(req, CreateRoom);
   if (!body.ok) return body.res;
-  const { dates, durationDays } = body.data;
-  if (!blockStarts({ dates, durationDays, startDate: "", endDate: "", excludeWeekends: false }).length) {
-    return fail(400, noBlockMessage(durationDays));
-  }
-  const result = await createRoom({ ...body.data, members: uniqueNames(body.data.members) });
+  const { dates } = body.data;
+  const config: SlotConfig = {
+    ...body.data,
+    startDate: dates[0],
+    endDate: dates[dates.length - 1],
+    excludeWeekends: false,
+  };
+  config.dateSlots = cleanDateSlots(config, body.data.dateSlots);
+  const problem = scheduleError(config);
+  if (problem) return fail(400, problem);
+  const result = await createRoom({
+    ...body.data,
+    dateSlots: config.dateSlots,
+    members: uniqueNames(body.data.members),
+  });
   return json(result, 201);
 }

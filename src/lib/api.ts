@@ -2,7 +2,7 @@ import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { getAdminRoom } from "./rooms";
-import { daySpan, MAX_DAYS, MAX_DURATION_DAYS } from "./slots";
+import { blockSlots, blockStarts, daySpan, MAX_DAYS, MAX_DURATION_DAYS, type SlotConfig } from "./slots";
 
 export const json = <T>(data: T, status = 200) => NextResponse.json(data, { status });
 
@@ -49,6 +49,21 @@ export const durationSchema = z
   .max(MAX_DURATION_DAYS, `ประชุมติดกันได้ไม่เกิน ${MAX_DURATION_DAYS} วัน`);
 
 export const noBlockMessage = (n: number) => `วันที่เลือกต้องมีวันที่ติดกันครบ ${n} วันอย่างน้อย 1 ชุด`;
+
+/** Why the room's dates and slots can't hold a single meeting, or null when they can. */
+export function scheduleError(c: SlotConfig): string | null {
+  const starts = blockStarts(c);
+  if (!starts.length) return noBlockMessage(c.durationDays);
+  if (!starts.some((d) => blockSlots(c, d).length)) {
+    return `ชุดวันติดกัน ${c.durationDays} วันต้องมีช่วงเวลาที่เปิดให้เลือกตรงกันทุกวันอย่างน้อย 1 ช่วง`;
+  }
+  return null;
+}
+
+/** Per-date slot picks — cleaned against the room with `cleanDateSlots` before saving. */
+export const dateSlotsSchema = z
+  .record(dateSchema, z.array(z.number().int()).min(1, "แต่ละวันต้องเปิดอย่างน้อย 1 ช่วงเวลา").max(48))
+  .refine((o) => Object.keys(o).length <= MAX_DAYS, { message: `เลือกได้ไม่เกิน ${MAX_DAYS} วัน` });
 
 /** Hand-picked meeting dates: 1–MAX_DAYS unique days within one year, returned sorted. */
 export const datesSchema = z

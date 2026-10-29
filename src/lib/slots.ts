@@ -15,6 +15,8 @@ export interface SlotConfig {
   slotMinutes: number;
   /** How many consecutive calendar days the meeting runs (same slot each day). */
   durationDays: number;
+  /** Per-date slot keys, e.g. day 1 morning only. A date not listed offers every slot. */
+  dateSlots: Record<string, number[]>;
 }
 
 export interface Slot {
@@ -54,6 +56,33 @@ export function getSlots(c: SlotConfig): Slot[] {
     slots.push({ key: m, label: fmtMin(m), start: m, end: m + c.slotMinutes });
   }
   return slots;
+}
+
+/** Whether `slot` is offered on `date` (dates without a per-date pick offer every slot). */
+export function isOffered(c: Pick<SlotConfig, "dateSlots">, date: string, slot: number): boolean {
+  const only = c.dateSlots[date];
+  return !only || only.includes(slot);
+}
+
+export function slotsForDate(c: SlotConfig, date: string): Slot[] {
+  return getSlots(c).filter((s) => isOffered(c, date, s.key));
+}
+
+/**
+ * Keeps only per-date picks that matter: dates the room offers, real slot keys, and not "every slot".
+ * Day mode has a single slot, so it never has per-date picks.
+ */
+export function cleanDateSlots(c: SlotConfig, dateSlots: Record<string, number[]>): Record<string, number[]> {
+  if (c.timeMode === "day") return {};
+  const keys = getSlots(c).map((s) => s.key);
+  const out: Record<string, number[]> = {};
+  for (const d of getDates(c)) {
+    const pick = dateSlots[d];
+    if (!pick) continue;
+    const kept = keys.filter((k) => pick.includes(k));
+    if (kept.length && kept.length < keys.length) out[d] = kept;
+  }
+  return out;
 }
 
 function parseDate(d: string): Date {
@@ -104,6 +133,12 @@ export function blockDays(c: BlockConfig, start: string, offered = new Set(getDa
 export function blockStarts(c: BlockConfig): string[] {
   const offered = new Set(getDates(c));
   return [...offered].filter((d) => blockDays(c, d, offered) !== null);
+}
+
+/** Slots offered on every day of a meeting starting on `start` (none if the run of days is incomplete). */
+export function blockSlots(c: SlotConfig, start: string, offered?: Set<string>): Slot[] {
+  const days = blockDays(c, start, offered);
+  return days ? getSlots(c).filter((s) => days.every((d) => isOffered(c, d, s.key))) : [];
 }
 
 export const cellKey = (date: string, slot: number) => `${date}|${slot}`;

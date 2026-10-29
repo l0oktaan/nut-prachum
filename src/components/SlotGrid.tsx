@@ -3,7 +3,17 @@
 import { Fragment, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { Check, Star } from "lucide-react";
 import { cx } from "./ui";
-import { cellKey, dateParts, getDates, getSlots, type Level, type Slot, type SlotConfig } from "@/lib/slots";
+import {
+  cellKey,
+  dateParts,
+  getDates,
+  getSlots,
+  isOffered,
+  slotsForDate,
+  type Level,
+  type Slot,
+  type SlotConfig,
+} from "@/lib/slots";
 import { score, type CellTally } from "@/lib/results";
 
 /* ------------------------------- shared frame ------------------------------ */
@@ -18,7 +28,11 @@ function GridFrame({
   onDateClick?: (date: string) => void;
 }) {
   const dates = useMemo(() => getDates(config), [config]);
-  const slots = useMemo(() => getSlots(config), [config]);
+  // Rows for slots that at least one date offers; cells a date doesn't offer are drawn as closed.
+  const slots = useMemo(
+    () => getSlots(config).filter((s) => dates.some((d) => isOffered(config, d, s.key))),
+    [config, dates],
+  );
   const compact = config.timeMode === "hour";
 
   return (
@@ -65,7 +79,16 @@ function GridFrame({
               {slot.sub && <span className="text-[11px] font-normal text-stone-400">{slot.sub}</span>}
             </div>
             {dates.map((d) => (
-              <Fragment key={d}>{renderCell(d, slot)}</Fragment>
+              <Fragment key={d}>
+                {isOffered(config, d, slot.key) ? (
+                  renderCell(d, slot)
+                ) : (
+                  <div
+                    title="ผู้จัดไม่ได้เปิดช่วงนี้"
+                    className={cx("cell-closed w-full rounded-2xl", cellHeight(config))}
+                  />
+                )}
+              </Fragment>
             ))}
           </Fragment>
         ))}
@@ -124,7 +147,7 @@ export function EditGrid({
 
   const toggleDate = (date: string) => {
     if (disabled) return;
-    const keys = getSlots(config).map((s) => cellKey(date, s.key));
+    const keys = slotsForDate(config, date).map((s) => cellKey(date, s.key));
     const allSet = keys.every((k) => valueRef.current.get(k) === brush);
     apply(keys, allSet ? 0 : brush);
   };

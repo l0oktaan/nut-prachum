@@ -2,16 +2,17 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 import {
   dateSchema,
+  dateSlotsSchema,
   datesSchema,
   durationSchema,
   fail,
   json,
-  noBlockMessage,
   parseBody,
   requireAdmin,
+  scheduleError,
 } from "@/lib/api";
-import { deleteRoom, getAdminSnapshot, setRoomDates, toRoomPublic, updateRoom } from "@/lib/rooms";
-import { blockStarts, getSlots } from "@/lib/slots";
+import { deleteRoom, getAdminSnapshot, setRoomSchedule, toRoomPublic, updateRoom } from "@/lib/rooms";
+import { blockSlots, cleanDateSlots, getDates } from "@/lib/slots";
 
 type Ctx = RouteContext<"/api/rooms/[slug]/admin">;
 
@@ -29,6 +30,7 @@ const UpdateRoom = z.object({
   final: z.object({ date: dateSchema, slot: z.number().int() }).nullable().optional(),
   dates: datesSchema.optional(),
   durationDays: durationSchema.optional(),
+  dateSlots: dateSlotsSchema.optional(),
 });
 
 export async function PATCH(req: NextRequest, ctx: Ctx) {
@@ -37,19 +39,20 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   const body = await parseBody(req, UpdateRoom);
   if (!body.ok) return body.res;
 
-  const { final, dates, durationDays } = body.data;
+  const { final, dates, durationDays, dateSlots } = body.data;
   const current = toRoomPublic(auth.room);
   const next = {
     ...current,
     dates: dates ?? current.dates,
     durationDays: durationDays ?? current.durationDays,
   };
-  const starts = new Set(blockStarts(next));
-  if ((dates || durationDays) && !starts.size) return fail(400, noBlockMessage(next.durationDays));
+  next.dateSlots = cleanDateSlots(next, dateSlots ?? current.dateSlots);
+  const scheduleChanged = dates !== undefined || dateSlots !== undefined;
+  const problem = scheduleError(next);
+  if ((scheduleChanged || durationDays) && problem) return fail(400, problem);
 
-  // A confirmed meeting must start a full run of consecutive offered days at a real slot.
-  const isValid = (f: { date: string; slot: number }) =>
-    starts.has(f.date) && getSlots(next).some((s) => s.key === f.slot);
+  // A confirmed meeting must start a full run of consecutive offered days at a slot offered on each of them.
+  const isValid = (f: { date: string; slot: number }) => blockSlots(next, f.date).some((s) => s.key === f.slot);
   if (final && !isValid(final)) return fail(400, "ช่วงเวลาที่เลือกไม่อยู่ในห้องนี้");
 
   // Changing dates or length can invalidate an earlier confirmation — clear it rather than keep a bad one.
@@ -58,7 +61,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (!isValid({ date: current.finalDate, slot: current.finalSlot })) finalUpdate = null;
   }
 
-  const removedAnswers = dates ? await setRoomDates(auth.room, dates) : 0;
+  const removedAnswers = scheduleChanged ? await setRoomSchedule(auth.room, getDates(next), next.dateSlots) : 0;
   await updateRoom(auth.room, { ...body.data, final: finalUpdate });
   return json({ ok: true, removedAnswers });
 }

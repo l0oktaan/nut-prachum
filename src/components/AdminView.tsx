@@ -32,15 +32,21 @@ import { api, forgetRoom, loadSavedRooms, readHashParam, saveRoom, timeAgo, useC
 import { candidates, rank, tally } from "@/lib/results";
 import { announcementText } from "@/lib/calendar";
 import {
+  blockSlots,
   blockStarts,
   cellKey,
+  cleanDateSlots,
   dateParts,
   formatBlock,
   formatDateShortYear,
   getDates,
+  getSlots,
+  isOffered,
   slotLabel,
   TIME_MODE_LABEL,
+  type SlotConfig,
 } from "@/lib/slots";
+import { DateSlotsField } from "./DateSlotsField";
 import { DurationField } from "./DurationField";
 import type { AdminSnapshot, ParticipantAdmin } from "@/lib/types";
 import { localToday, MultiDatePicker } from "./MultiDatePicker";
@@ -569,7 +575,12 @@ function RoomSettings({
 
   return (
     <div className="grid gap-5 lg:grid-cols-2">
-      <DatesEditor key={`${getDates(room).join()}:${room.durationDays}`} data={data} busy={busy} patchRoom={patchRoom} />
+      <DatesEditor
+        key={`${getDates(room).join()}:${room.durationDays}:${JSON.stringify(room.dateSlots)}`}
+        data={data}
+        busy={busy}
+        patchRoom={patchRoom}
+      />
 
       <section className="card flex flex-col gap-4 p-5">
         <h2 className="font-semibold">ข้อมูลห้อง</h2>
@@ -651,6 +662,7 @@ function DatesEditor({
   const original = useMemo(() => getDates(room), [room]);
   const [draft, setDraft] = useState(original);
   const [duration, setDuration] = useState(room.durationDays);
+  const [slotPicks, setSlotPicks] = useState(room.dateSlots);
   const today = useClientValue(localToday, "");
 
   const draftSet = new Set(draft);
@@ -659,8 +671,13 @@ function DatesEditor({
   const removed = original.filter((d) => !draftSet.has(d));
   const datesChanged = added.length > 0 || removed.length > 0;
   const durationChanged = duration !== room.durationDays;
-  const changed = datesChanged || durationChanged;
-  const nextStarts = blockStarts({ ...room, dates: draft, durationDays: duration });
+  const next: SlotConfig = { ...room, dates: draft, durationDays: duration };
+  next.dateSlots = cleanDateSlots(next, slotPicks);
+  // Compare against the saved picks on the dates that remain, so removing a date alone isn't a slot change.
+  const slotsChanged = JSON.stringify(next.dateSlots) !== JSON.stringify(cleanDateSlots(next, room.dateSlots));
+  const changed = datesChanged || durationChanged || slotsChanged;
+  const nextStarts = blockStarts(next);
+  const hasSlot = nextStarts.some((d) => blockSlots(next, d).length > 0);
 
   // Who answered on each date being removed — their answers for that date will be deleted.
   const names = new Map(participants.map((p) => [p.id, p.name]));
@@ -668,15 +685,33 @@ function DatesEditor({
     date: d,
     people: [...new Set(cells.filter((c) => c.d === d).map((c) => c.p))].map((id) => names.get(id) ?? "?"),
   }));
-  // The confirmed meeting survives only if it still starts a full run of consecutive days.
-  const losesFinal = changed && room.finalDate !== null && !nextStarts.includes(room.finalDate);
+  // Slots closed on dates that stay — answers there will be deleted too.
+  const closed = draft
+    .filter((d) => originalSet.has(d))
+    .map((d) => {
+      const keys = getSlots(room)
+        .filter((s) => isOffered(room, d, s.key) && !isOffered(next, d, s.key))
+        .map((s) => s.key);
+      const people = [...new Set(cells.filter((c) => c.d === d && keys.includes(c.s)).map((c) => c.p))];
+      return { date: d, keys, people: people.map((id) => names.get(id) ?? "?") };
+    })
+    .filter((c) => c.keys.length);
+  const slotNames = (keys: number[]) => getSlots(room).filter((s) => keys.includes(s.key)).map((s) => s.label).join(", ");
+  // The confirmed meeting survives only if it still starts a full run of consecutive days at an open slot.
+  const losesFinal =
+    changed && room.finalDate !== null && !blockSlots(next, room.finalDate).some((s) => s.key === room.finalSlot);
 
   const save = () => {
     const affected = impact.filter((i) => i.people.length);
-    if (affected.length || losesFinal) {
+    const affectedSlots = closed.filter((c) => c.people.length);
+    if (affected.length || affectedSlots.length || losesFinal) {
       const lines = affected.map((i) => `• ${dateLabel(i.date)} — ${i.people.length} คน (${i.people.join(", ")})`);
+      const slotLines = affectedSlots.map(
+        (c) => `• ${dateLabel(c.date)} ช่วง ${slotNames(c.keys)} — ${c.people.length} คน (${c.people.join(", ")})`,
+      );
       const msg = [
         affected.length && `วันที่จะเอาออกมีคำตอบอยู่แล้ว:\n${lines.join("\n")}\n\nคำตอบของวันเหล่านี้จะถูกลบถาวร`,
+        slotLines.length && `ช่วงเวลาที่จะปิดมีคำตอบอยู่แล้ว:\n${slotLines.join("\n")}\n\nคำตอบของช่วงเหล่านี้จะถูกลบถาวร`,
         losesFinal && "วันประชุมที่ยืนยันไว้จะถูกยกเลิก",
       ]
         .filter(Boolean)
@@ -686,6 +721,7 @@ function DatesEditor({
     patchRoom({
       ...(datesChanged ? { dates: draft } : {}),
       ...(durationChanged ? { durationDays: duration } : {}),
+      ...(slotsChanged ? { dateSlots: next.dateSlots } : {}),
     });
   };
 
@@ -710,12 +746,14 @@ function DatesEditor({
             initialMonth={original.find((d) => d >= today) ?? original[0]}
           />
           <DurationField value={duration} onChange={setDuration} dates={draft} />
+          {room.timeMode !== "day" && <DateSlotsField config={next} value={slotPicks} onChange={setSlotPicks} />}
         </div>
 
         <div className="flex flex-col gap-4">
           {!changed ? (
             <p className="rounded-2xl bg-canvas px-4 py-3 text-sm text-stone-500">
-              ยังไม่มีการเปลี่ยนแปลง — แตะวันบนปฏิทินเพื่อเพิ่มหรือเอาออก หรือปรับจำนวนวันประชุมติดกัน
+              ยังไม่มีการเปลี่ยนแปลง — แตะวันบนปฏิทินเพื่อเพิ่มหรือเอาออก ปรับจำนวนวันประชุมติดกัน
+              {room.timeMode !== "day" && " หรือกำหนดช่วงเวลาแยกรายวัน"}
             </p>
           ) : (
             <>
@@ -755,6 +793,38 @@ function DatesEditor({
                   </ul>
                 </div>
               )}
+              {slotsChanged && closed.length === 0 && (
+                <p className="rounded-2xl bg-canvas px-4 py-3 text-sm">
+                  เปลี่ยนช่วงเวลารายวัน
+                  <span className="block text-xs text-stone-500">ไม่มีช่วงที่ถูกปิด คำตอบเดิมไม่หาย</span>
+                </p>
+              )}
+              {closed.length > 0 && (
+                <div>
+                  <p className="mb-1.5 text-sm font-medium text-rose-600">ปิดช่วงเวลา</p>
+                  <ul className="flex flex-col gap-1.5">
+                    {closed.map((c) => (
+                      <li
+                        key={c.date}
+                        className="flex items-center justify-between gap-2 rounded-xl bg-rose-50 px-3 py-1.5 text-xs text-rose-700"
+                      >
+                        <span className="font-medium">
+                          − {dateLabel(c.date)} · {slotNames(c.keys)}
+                        </span>
+                        <span className={c.people.length ? "shrink-0 font-semibold" : "shrink-0 opacity-70"}>
+                          {c.people.length ? `คำตอบ ${c.people.length} คนจะถูกลบ` : "ยังไม่มีใครตอบ"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {nextStarts.length > 0 && !hasSlot && (
+                <p className="flex items-start gap-2 rounded-2xl bg-ink px-3 py-2.5 text-xs text-white">
+                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-neon" />
+                  ชุดวันติดกัน {duration} วันยังไม่มีช่วงเวลาที่เปิดตรงกันทุกวัน — เปิดช่วงเดียวกันให้ครบทุกวันในชุด
+                </p>
+              )}
               {losesFinal && (
                 <p className="flex items-start gap-2 rounded-2xl bg-ink px-3 py-2.5 text-xs text-white">
                   <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
@@ -768,7 +838,7 @@ function DatesEditor({
             <button
               type="button"
               className="btn btn-primary"
-              disabled={!changed || busy || draft.length === 0 || nextStarts.length === 0}
+              disabled={!changed || busy || draft.length === 0 || !hasSlot}
               onClick={save}
             >
               {busy ? <Spinner /> : <CheckCircle2 className="size-4" />} บันทึกวันที่
@@ -776,6 +846,7 @@ function DatesEditor({
             <button type="button" className="btn btn-ghost" disabled={!changed} onClick={() => {
               setDraft(original);
               setDuration(room.durationDays);
+              setSlotPicks(room.dateSlots);
             }}>
               <RotateCcw className="size-4" /> ยกเลิกการแก้ไข
             </button>

@@ -1,6 +1,6 @@
 import "server-only";
 import { isUniqueViolation, query, transaction } from "./db";
-import { getDates, getSlots, type Level, type TimeMode } from "./slots";
+import { getDates, getSlots, isOffered, type Level, type SlotConfig, type TimeMode } from "./slots";
 import { hashSecret, newSecret, newSlug, secretMatches } from "./tokens";
 import type {
   AdminSnapshot,
@@ -27,6 +27,7 @@ interface RoomRow {
   day_end_min: number;
   slot_minutes: number;
   duration_days: number;
+  date_slots: Record<string, number[]>;
   allow_new_members: boolean;
   is_locked: boolean;
   final_date: string | null;
@@ -66,6 +67,7 @@ export function toRoomPublic(r: RoomRow): RoomPublic {
     dayEndMin: r.day_end_min,
     slotMinutes: r.slot_minutes,
     durationDays: r.duration_days,
+    dateSlots: r.date_slots,
     allowNewMembers: r.allow_new_members,
     isLocked: r.is_locked,
     finalDate: r.final_date,
@@ -110,6 +112,7 @@ export interface CreateRoomInput {
   dayEndMin: number;
   slotMinutes: number;
   durationDays: number;
+  dateSlots: Record<string, number[]>;
   allowNewMembers: boolean;
   members: string[];
 }
@@ -124,8 +127,9 @@ export async function createRoom(input: CreateRoomInput) {
         await db.query("SAVEPOINT slug_try");
         const res = await db.query<RoomRow>(
           `INSERT INTO rooms (slug, title, description, organizer_name, dates, start_date, end_date,
-             time_mode, day_start_min, day_end_min, slot_minutes, allow_new_members, admin_key_hash, duration_days)
-           VALUES ($1,$2,$3,$4,$5::date[],$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`,
+             time_mode, day_start_min, day_end_min, slot_minutes, allow_new_members, admin_key_hash, duration_days,
+             date_slots)
+           VALUES ($1,$2,$3,$4,$5::date[],$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::jsonb) RETURNING *`,
           [
             newSlug(),
             input.title,
@@ -141,6 +145,7 @@ export async function createRoom(input: CreateRoomInput) {
             input.allowNewMembers,
             hashSecret(adminKey),
             input.durationDays,
+            JSON.stringify(input.dateSlots),
           ],
         );
         room = res.rows[0];
@@ -239,24 +244,31 @@ export async function updateRoom(room: RoomRow, s: RoomSettings) {
 }
 
 /**
- * Replaces the room's dates (converting older range-based rooms to a date list).
- * Answers on removed dates are deleted, and a confirmed meeting on a removed date is cleared.
+ * Replaces the room's dates (converting older range-based rooms to a date list) and per-date slots.
+ * Answers on removed dates or slots are deleted, and a confirmed meeting on a removed date is cleared.
  * Returns how many answer cells were removed.
  */
-export async function setRoomDates(room: RoomRow, dates: string[]): Promise<number> {
+export async function setRoomSchedule(
+  room: RoomRow,
+  dates: string[],
+  dateSlots: Record<string, number[]>,
+): Promise<number> {
   return transaction(async (db) => {
     const removed = await db.query(
       `DELETE FROM availability a USING participants p
-        WHERE p.id = a.participant_id AND p.room_id = $1 AND NOT (a.date = ANY($2::date[]))`,
-      [room.id, dates],
+        WHERE p.id = a.participant_id AND p.room_id = $1
+          AND (NOT (a.date = ANY($2::date[]))
+               OR ($3::jsonb ? a.date::text AND NOT ($3::jsonb -> a.date::text) @> to_jsonb(a.slot)))`,
+      [room.id, dates, JSON.stringify(dateSlots)],
     );
     await db.query(
       `UPDATE rooms SET dates = $2::date[], start_date = $3, end_date = $4, exclude_weekends = false,
+              date_slots = $5::jsonb,
               final_date = CASE WHEN final_date = ANY($2::date[]) THEN final_date END,
               final_slot = CASE WHEN final_date = ANY($2::date[]) THEN final_slot END,
               updated_at = now()
         WHERE id = $1`,
-      [room.id, dates, dates[0], dates[dates.length - 1]],
+      [room.id, dates, dates[0], dates[dates.length - 1], JSON.stringify(dateSlots)],
     );
     return removed.rowCount ?? 0;
   });
@@ -345,10 +357,10 @@ export async function saveAvailability(
   participantId: string,
   cells: { d: string; s: number; l: Level }[],
 ) {
-  const config = toRoomPublic(room);
+  const config: SlotConfig = toRoomPublic(room);
   const validDates = new Set(getDates(config));
   const validSlots = new Set(getSlots(config).map((s) => s.key));
-  const clean = cells.filter((c) => validDates.has(c.d) && validSlots.has(c.s));
+  const clean = cells.filter((c) => validDates.has(c.d) && validSlots.has(c.s) && isOffered(config, c.d, c.s));
 
   await transaction(async (db) => {
     await db.query("DELETE FROM availability WHERE participant_id = $1", [participantId]);

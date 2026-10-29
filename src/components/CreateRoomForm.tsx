@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarHeart, Clock, Clock3, Coffee, PenLine, Sparkles, Sun, Users } from "lucide-react";
+import { DateSlotsField } from "./DateSlotsField";
 import { DurationField } from "./DurationField";
 import { MultiDatePicker } from "./MultiDatePicker";
 import { cx, ErrorNote, Segmented, Spinner, Switch } from "./ui";
 import { api, saveRoom } from "@/lib/client";
-import { fmtMin, getSlots, type TimeMode } from "@/lib/slots";
+import { cleanDateSlots, fmtMin, getSlots, slotsForDate, type SlotConfig, type TimeMode } from "@/lib/slots";
 
 const HOURS = Array.from({ length: 18 }, (_, i) => (i + 6) * 60); // 06:00 – 23:00
 
@@ -22,13 +23,14 @@ export function CreateRoomForm() {
   const [dayEndMin, setDayEndMin] = useState(1020);
   const [slotMinutes, setSlotMinutes] = useState<30 | 60>(60);
   const [durationDays, setDurationDays] = useState(1);
+  const [dateSlots, setDateSlots] = useState<Record<string, number[]>>({});
   const [members, setMembers] = useState("");
   const [allowNewMembers, setAllowNewMembers] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const memberList = members.split(/\n|,/).map((n) => n.trim()).filter(Boolean);
-  const slotCount = getSlots({
+  const config: SlotConfig = {
     dates,
     startDate: "",
     endDate: "",
@@ -38,7 +40,11 @@ export function CreateRoomForm() {
     dayEndMin,
     slotMinutes,
     durationDays,
-  }).length;
+    dateSlots,
+  };
+  const slotCount = getSlots(config).length;
+  const perDate = Object.keys(cleanDateSlots(config, dateSlots)).length > 0;
+  const cellCount = dates.reduce((n, d) => n + slotsForDate(config, d).length, 0);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +67,7 @@ export function CreateRoomForm() {
           dayEndMin,
           slotMinutes,
           durationDays,
+          dateSlots: cleanDateSlots(config, dateSlots),
           allowNewMembers,
           members: memberList,
         }),
@@ -160,9 +167,11 @@ export function CreateRoomForm() {
           {dates.length > 0 && slotCount > 0 && (
             <span className="ml-1 font-semibold text-ink">
               · ตาราง {dates.length} วัน × {slotCount} ช่วง
+              {perDate && ` (เปิดให้เลือก ${cellCount} ช่อง)`}
             </span>
           )}
         </p>
+        {timeMode !== "day" && <DateSlotsField config={config} value={dateSlots} onChange={setDateSlots} />}
       </Section>
 
       <Section icon={<Users className="size-4" />} tone="bg-canvas text-ink" title="รายชื่อสมาชิก (แนะนำ)">
