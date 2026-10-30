@@ -74,6 +74,15 @@ export async function listSecurityEvents(sinceHours: number, limit = 300): Promi
   return rows.map((r) => ({ ...r, at: r.at.toISOString() }));
 }
 
+/** How many kept events are older than the window — so an empty view can say there's more. */
+export async function countOlderEvents(sinceHours: number): Promise<number> {
+  const rows = await query<{ n: number }>(
+    "SELECT count(*)::int AS n FROM security_events WHERE at <= now() - make_interval(hours => $1)",
+    [sinceHours],
+  );
+  return rows[0].n;
+}
+
 export async function countSecurityEvents(sinceHours: number): Promise<Record<string, number>> {
   const rows = await query<{ kind: string; n: number }>(
     `SELECT kind, count(*)::int AS n FROM security_events

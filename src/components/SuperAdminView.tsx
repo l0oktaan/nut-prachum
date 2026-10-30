@@ -734,9 +734,24 @@ const EVENT_LABEL: Record<string, { label: string; bad?: boolean }> = {
   auto_cleanup: { label: "ลบห้องอัตโนมัติ" },
 };
 
+const RANGES = [
+  { value: 24, label: "24 ชม." },
+  { value: 72, label: "3 วัน" },
+  { value: 168, label: "7 วัน" },
+  { value: 720, label: "30 วัน" },
+  { value: 2160, label: "90 วัน" },
+];
+const rangeLabel = (h: number) => RANGES.find((r) => r.value === h)?.label ?? `${h} ชม.`;
+
 function SecurityTab({ onError }: { onError: (e: unknown) => void }) {
-  const [hours, setHours] = useState(24);
-  const { data, error, loading, refresh } = useLoad<{ events: SecurityEvent[]; traffic: Traffic }>(
+  // A week by default: a 24-hour view looked empty the morning after, as if the log had been wiped.
+  const [hours, setHours] = useState(168);
+  const { data, error, loading, refresh } = useLoad<{
+    events: SecurityEvent[];
+    older: number;
+    trafficHours: number;
+    traffic: Traffic;
+  }>(
     `/api/superadmin/security?hours=${hours}`,
     onError,
   );
@@ -745,15 +760,7 @@ function SecurityTab({ onError }: { onError: (e: unknown) => void }) {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center gap-2">
-        <Segmented
-          value={hours}
-          onChange={setHours}
-          options={[
-            { value: 24, label: "24 ชม." },
-            { value: 72, label: "3 วัน" },
-            { value: 168, label: "7 วัน" },
-          ]}
-        />
+        <Segmented value={hours} onChange={setHours} options={RANGES} />
         <RefreshButton loading={loading} onClick={refresh} />
       </div>
       <ErrorNote message={error} />
@@ -769,6 +776,11 @@ function SecurityTab({ onError }: { onError: (e: unknown) => void }) {
           ) : (
             t && (
               <>
+                {data.trafficHours < hours && (
+                  <p className="text-xs text-stone-500">
+                    log การเข้าใช้จาก Traefik มีย้อนหลังสูงสุด 7 วัน — ตัวเลขด้านล่างเป็นของ 7 วันล่าสุด
+                  </p>
+                )}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                   <Tile label="Request ทั้งหมด" value={n(t.total)} sub={`${n(t.uniqueIps)} IP`} />
                   <Tile label="สำเร็จ (2xx/3xx)" value={n((t.byClass["2xx"] ?? 0) + (t.byClass["3xx"] ?? 0))} />
@@ -797,10 +809,14 @@ function SecurityTab({ onError }: { onError: (e: unknown) => void }) {
 
           <section className="card overflow-x-auto">
             <h2 className="card-title border-b border-line/5 px-5 py-4">
-              เหตุการณ์จากแอป ({data.events.length}) <span className="text-xs font-normal text-stone-500">เก็บ 90 วัน</span>
+              เหตุการณ์จากแอป ({data.events.length}){" "}
+              <span className="text-xs font-normal text-stone-500">ช่วง {rangeLabel(hours)} · เก็บไว้ 90 วัน</span>
             </h2>
             {data.events.length === 0 ? (
-              <p className="p-6 text-center text-sm text-stone-500">ไม่มีเหตุการณ์ในช่วงนี้</p>
+              <p className="p-6 text-center text-sm text-stone-500">
+                ไม่มีเหตุการณ์ในช่วง {rangeLabel(hours)}
+                {data.older > 0 && ` — มีเหตุการณ์ที่เก่ากว่านี้ ${n(data.older)} รายการ เลือกช่วงที่ยาวขึ้นด้านบนเพื่อดู`}
+              </p>
             ) : (
               <table className="w-full min-w-[40rem] text-left text-sm">
                 <tbody className="divide-y divide-line/5">
